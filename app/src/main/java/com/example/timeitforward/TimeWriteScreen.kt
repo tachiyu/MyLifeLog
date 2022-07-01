@@ -1,6 +1,7 @@
 package com.example.timeitforward
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -24,6 +25,7 @@ import com.vanpra.composematerialdialogs.datetime.time.timepicker
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -352,7 +354,13 @@ fun insertTimeRecord(
     fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
     viewModel: TimeRecordViewModel
 ) {
-    if ((fromDateTime != null) && (untilDateTime != null)) {
+    if (
+        (fromDateTime != null) // 開始時刻がnullでない
+        && (untilDateTime != null) // 終了時刻がnullでない
+        && (untilDateTime > fromDateTime) // 開始時間が終了時間より先
+        && (ChronoUnit.MINUTES.between(untilDateTime, fromDateTime) < 24*60) // 開始時刻と終了時刻の差が1日以内
+    ) {
+        // TimeRecordをデータベースに挿入
         viewModel.insertTimeRecord(
             TimeRecord(
                 contentType = contentType.ifBlank { "不明" },
@@ -361,5 +369,9 @@ fun insertTimeRecord(
                 untilDateTime = untilDateTime
             )
         )
+    } else {
+        // ログで通知
+        Log.e("insertTimeRecord", "Invalid time record")
+
     }
 }
