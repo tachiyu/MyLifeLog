@@ -21,7 +21,6 @@ import com.vanpra.composematerialdialogs.datetime.date.datepicker
 import com.vanpra.composematerialdialogs.datetime.time.TimePickerColors
 import com.vanpra.composematerialdialogs.datetime.time.TimePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
-import java.sql.Time
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -42,8 +41,8 @@ fun TimeWriteScreenSetup(viewModel: TimeRecordViewModel) {
 fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewModel) {
 
     val dialogColor = remember { Color(0xFF3700B3) }
-    var contentType: String by remember { mutableStateOf("")}
-    var timeContent: String by remember { mutableStateOf("")}
+    var contentType: String by remember { mutableStateOf("") }
+    var timeContent: String by remember { mutableStateOf("") }
     var fromDate: LocalDate? by remember { mutableStateOf(null) }
     var untilDate: LocalDate? by remember { mutableStateOf(null) }
     var fromTime: LocalTime? by remember { mutableStateOf(null) }
@@ -64,7 +63,7 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
             onValueChange = { timeContent = it })
         Row {
             DatePickerDialogButton(
-                buttonModifier = Modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(8.dp)
                     .background(MaterialTheme.colors.primaryVariant),
@@ -73,7 +72,7 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
                 onDateChange = { fromDate = it }
             )
             DatePickerDialogButton(
-                buttonModifier = Modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(8.dp)
                     .background(MaterialTheme.colors.primaryVariant),
@@ -85,7 +84,7 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
         Row {
             TimePickerDialogButton(
                 dialogColor = dialogColor,
-                buttonModifier = Modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(8.dp)
                     .background(MaterialTheme.colors.primaryVariant),
@@ -95,7 +94,7 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
             )
             TimePickerDialogButton(
                 dialogColor = dialogColor,
-                buttonModifier = Modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(8.dp)
                     .background(MaterialTheme.colors.primaryVariant),
@@ -119,16 +118,13 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
             onClick = {
                 val fromDateTime = getLocalDateTime(fromDate, fromTime)
                 val untilDateTime = getLocalDateTime(untilDate, untilTime)
-                if ((fromDateTime != null)&&(untilDateTime != null)) {
-                    viewModel.insertTimeRecord(
-                        TimeRecord(
-                            contentType = contentType.ifBlank { "不明" },
-                            timeContent = timeContent.ifBlank { "不明" },
-                            fromDateTime = fromDateTime,
-                            untilDateTime = untilDateTime
-                        )
-                    )
-                }
+                insertTimeRecord(
+                    contentType = contentType,
+                    timeContent = timeContent,
+                    fromDateTime = fromDateTime,
+                    untilDateTime = untilDateTime,
+                    viewModel = viewModel
+                )
             }
         ) {
             Text(
@@ -144,8 +140,8 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            items(allTimeRecords) {
-                item -> TimeRecordRow(
+            items(allTimeRecords) { item ->
+                TimeRecordRow(
                     id = item.id,
                     contentType = item.contentType,
                     content = item.timeContent,
@@ -154,7 +150,7 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
                 )
             }
         }
-        
+
     }
 }
 
@@ -169,7 +165,7 @@ fun TimeContentField(
     TextField(
         value,
         onValueChange = onValueChange,
-        label = {Text(label)},
+        label = { Text(label) },
         singleLine = true,
         modifier = modifier
     )
@@ -177,15 +173,15 @@ fun TimeContentField(
 
 @Composable
 fun DatePickerDialogButton(
-    buttonModifier: Modifier,
+    modifier: Modifier,
     buttonTitle: String,
     dialogTitle: String,
     onDateChange: (LocalDate) -> Unit
 ) {
     DialogAndShowButton(
-        modifier = buttonModifier,
+        modifier = modifier,
         buttonText = buttonTitle,
-        buttons = { defaultDateTimeDialogButtons() }
+        buttons = { DefaultDateTimeDialogButtons() }
     ) {
         datepicker(
             title = dialogTitle,
@@ -199,16 +195,16 @@ fun DatePickerDialogButton(
 @Composable
 fun TimePickerDialogButton(
     dialogColor: Color,
-    buttonModifier: Modifier,
+    modifier: Modifier,
     buttonTitle: String,
     dialogTitle: String,
     onTimeChange: (LocalTime) -> Unit
 ) {
     val colors: TimePickerColors = getColors(dialogColor = dialogColor)
     DialogAndShowButton(
-        modifier = buttonModifier,
+        modifier = modifier,
         buttonText = buttonTitle,
-        buttons = { defaultDateTimeDialogButtons() }
+        buttons = { DefaultDateTimeDialogButtons() }
     ) {
         timepicker(
             title = dialogTitle,
@@ -248,24 +244,31 @@ fun DialogAndShowButton(
 }
 
 @Composable
-fun TimeRecordDraft(contentType: String, timeContent: String, fromDate: LocalDate?, fromTime: LocalTime?, untilDate: LocalDate?, untilTime: LocalTime?) {
+fun TimeRecordDraft(
+    contentType: String, timeContent: String,
+    fromDate: LocalDate?, fromTime: LocalTime?,
+    untilDate: LocalDate?, untilTime: LocalTime?
+) {
     Column() {
         Text(
             text = "$contentType $timeContent",
             modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center)
+            textAlign = TextAlign.Center
+        )
         Text(
             text = "${fromDate ?: ""}" +
                     " ~ " +
                     "${untilDate ?: ""}",
             modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center)
+            textAlign = TextAlign.Center
+        )
         Text(
             text = "${fromTime ?: ""}" +
                     "~ " +
                     "${untilTime ?: ""}",
             modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center)
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -288,14 +291,20 @@ fun ContentTypeTabs() {
 }
 
 @Composable
-fun TimeRecordRow(id: Int, contentType: String, content: String, fromDateTime: LocalDateTime, untilDateTime: LocalDateTime) {
+fun TimeRecordRow(
+    id: Int,
+    contentType: String,
+    content: String,
+    fromDateTime: LocalDateTime,
+    untilDateTime: LocalDateTime
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(5.dp)
     ) {
-        Text(id.toString(),  modifier = Modifier.weight(0.1f))
-        Text(contentType,  modifier = Modifier.weight(0.1f))
+        Text(id.toString(), modifier = Modifier.weight(0.1f))
+        Text(contentType, modifier = Modifier.weight(0.1f))
         Text(content, modifier = Modifier.weight(0.2f))
         Text(text = fromDateTime.toString(), modifier = Modifier.weight(0.2f))
         Text(text = untilDateTime.toString(), modifier = Modifier.weight(0.2f))
@@ -323,16 +332,34 @@ private fun getColors(dialogColor: Color): TimePickerColors {
 }
 
 @Composable
-private fun MaterialDialogButtons.defaultDateTimeDialogButtons() {
+private fun MaterialDialogButtons.DefaultDateTimeDialogButtons() {
     positiveButton("OK")
     negativeButton("Cancel")
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 private fun getLocalDateTime(date: LocalDate?, time: LocalTime?): LocalDateTime? {
-    return if((date != null)&&(time != null)) {
+    return if ((date != null) && (time != null)) {
         LocalDateTime.of(date, time)
     } else {
         null
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun insertTimeRecord(
+    contentType: String = "", timeContent: String = "",
+    fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
+    viewModel: TimeRecordViewModel
+) {
+    if ((fromDateTime != null) && (untilDateTime != null)) {
+        viewModel.insertTimeRecord(
+            TimeRecord(
+                contentType = contentType.ifBlank { "不明" },
+                timeContent = timeContent.ifBlank { "不明" },
+                fromDateTime = fromDateTime,
+                untilDateTime = untilDateTime
+            )
+        )
     }
 }
