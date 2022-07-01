@@ -1,4 +1,4 @@
-package com.example.timeitforward
+package com.example.timeitforward.db
 
 import android.os.Build
 import androidx.annotation.NonNull
@@ -9,8 +9,8 @@ import androidx.room.PrimaryKey
 import java.time.LocalDateTime
 
 @RequiresApi(Build.VERSION_CODES.O)
-@Entity(tableName="time_records")
-class TimeRecord
+@Entity(tableName="time_logs")
+class TimeLog
     (
     @ColumnInfo(name = "content_type") var contentType: String,
     @ColumnInfo(name = "time_content") var timeContent: String,
@@ -20,7 +20,7 @@ class TimeRecord
 
     @PrimaryKey(autoGenerate = true)
     @NonNull
-    @ColumnInfo(name = "time_record_id")
+    @ColumnInfo(name = "time_log_id")
     var id: Int = 0
 
 }

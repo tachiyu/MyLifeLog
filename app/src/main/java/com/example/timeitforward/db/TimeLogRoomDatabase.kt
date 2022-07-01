@@ -4,28 +4,30 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.room.*
+import com.example.timeitforward.db.TimeLog
+import com.example.timeitforward.db.TimeLogDao
 import java.time.LocalDateTime
 
 @RequiresApi(Build.VERSION_CODES.O)
 @TypeConverters(DateTimeConverter::class)
-@Database(entities = [(TimeRecord::class)], version = 1)
-abstract class TimeRecordRoomDatabase: RoomDatabase() {
+@Database(entities = [(TimeLog::class)], version = 1)
+abstract class TimeLogRoomDatabase: RoomDatabase() {
 
-    abstract fun timeRecordDao(): TimeRecordDao
+    abstract fun TimeLogDao(): TimeLogDao
 
     companion object {
 
-        private  var INSTANCE: TimeRecordRoomDatabase? = null
+        private  var INSTANCE: TimeLogRoomDatabase? = null
 
-        fun getInstance(context: Context): TimeRecordRoomDatabase {
+        fun getInstance(context: Context): TimeLogRoomDatabase {
             synchronized(this) {
                 var instance = INSTANCE
 
                 if (instance == null) {
                     instance = Room.databaseBuilder(
                         context.applicationContext,
-                        TimeRecordRoomDatabase::class.java,
-                        "time_record_database"
+                        TimeLogRoomDatabase::class.java,
+                        "time_log_database"
                     ).fallbackToDestructiveMigration().build()
 
                     INSTANCE = instance

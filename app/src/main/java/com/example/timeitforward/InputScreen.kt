@@ -1,7 +1,6 @@
 package com.example.timeitforward
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.timeitforward.db.TimeLog
 import com.vanpra.composematerialdialogs.*
 import com.vanpra.composematerialdialogs.datetime.date.DatePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
@@ -25,24 +25,28 @@ import com.vanpra.composematerialdialogs.datetime.time.timepicker
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.temporal.ChronoUnit
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TimeWriteScreenSetup(viewModel: TimeRecordViewModel) {
-    val allTimeRecords by viewModel.allTimeRecords.observeAsState(listOf())
+fun InputScreenSetup(viewModel: TimeLogViewModel) {
+    val searchResults by viewModel.searchResults.observeAsState(listOf())
 
-    TimeWriteScreen(
-        allTimeRecords = allTimeRecords,
+    InputScreen(
+        searchResults = searchResults,
         viewModel = viewModel
     )
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewModel) {
-
+fun InputScreen(
+    searchResults: List<TimeLog>,
+    viewModel: TimeLogViewModel
+) {
+    val tabData = listOf("場所", "アプリ", "睡眠", "その他")
     val dialogColor = remember { Color(0xFF3700B3) }
+
+    var tabIndex by remember { mutableStateOf(0) }
     var contentType: String by remember { mutableStateOf("") }
     var timeContent: String by remember { mutableStateOf("") }
     var fromDate: LocalDate? by remember { mutableStateOf(null) }
@@ -50,7 +54,26 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
     var fromTime: LocalTime? by remember { mutableStateOf(null) }
     var untilTime: LocalTime? by remember { mutableStateOf(null) }
 
-    Column {
+    updateSearchResults(
+        text = tabData[tabIndex],
+        viewModel = viewModel,
+        tabData = tabData
+    )
+
+    Column (
+        modifier = Modifier.fillMaxHeight(),
+        verticalArrangement = Arrangement.SpaceBetween
+    ){
+        Button(onClick = {
+            loadLogs(viewModel)
+            updateSearchResults(
+                text = tabData[tabIndex],
+                viewModel = viewModel,
+                tabData = tabData
+            )
+        }) {
+            Text("すべて更新")
+        }
         TimeContentField(
             value = contentType,
             modifier = Modifier
@@ -105,7 +128,7 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
                 onTimeChange = { untilTime = it }
             )
         }
-        TimeRecordDraft(
+        TimeLogDraft(
             contentType = contentType,
             timeContent = timeContent,
             fromDate = fromDate,
@@ -120,12 +143,17 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
             onClick = {
                 val fromDateTime = getLocalDateTime(fromDate, fromTime)
                 val untilDateTime = getLocalDateTime(untilDate, untilTime)
-                insertTimeRecord(
+                insertTimeLog(
                     contentType = contentType,
                     timeContent = timeContent,
                     fromDateTime = fromDateTime,
                     untilDateTime = untilDateTime,
                     viewModel = viewModel
+                )
+                updateSearchResults(
+                    text = tabData[tabIndex],
+                    viewModel = viewModel,
+                    tabData = tabData
                 )
             }
         ) {
@@ -139,11 +167,12 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
         }
         LazyColumn(
             modifier = Modifier
+                .weight(2f)
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            items(allTimeRecords) { item ->
-                TimeRecordRow(
+            items(searchResults) { item ->
+                TimeLogRow(
                     id = item.id,
                     contentType = item.contentType,
                     content = item.timeContent,
@@ -152,10 +181,29 @@ fun TimeWriteScreen(allTimeRecords: List<TimeRecord>, viewModel: TimeRecordViewM
                 )
             }
         }
+        ContentTypeTabs(
+            tabIndex = tabIndex,
+            tabData = tabData,
+            modifier = Modifier.weight(0.5f),
+            onTabSwitch = { index, text ->
+                tabIndex = index
+                updateSearchResults(text, viewModel, tabData)
+            }
+        )
 
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+private fun updateSearchResults(text:String, viewModel: TimeLogViewModel, tabData: List<String>) {
+    if(text == "その他") {
+        viewModel.findTimeLogByNotContentTypes(
+            tabData.filter { tabText -> tabText != "その他" }
+        )
+    } else {
+        viewModel.findTimeLogByContentType(text)
+    }
+}
 
 @Composable
 fun TimeContentField(
@@ -246,7 +294,7 @@ fun DialogAndShowButton(
 }
 
 @Composable
-fun TimeRecordDraft(
+fun TimeLogDraft(
     contentType: String, timeContent: String,
     fromDate: LocalDate?, fromTime: LocalTime?,
     untilDate: LocalDate?, untilTime: LocalTime?
@@ -275,25 +323,29 @@ fun TimeRecordDraft(
 }
 
 @Composable
-fun ContentTypeTabs() {
-    var tabIndex by remember { mutableStateOf(0) }
-    val tabData = listOf(
-        "場所",
-        "アプリ",
-        "睡眠",
-        "その他"
-    )
-    TabRow(selectedTabIndex = tabIndex) {
+fun ContentTypeTabs(
+    modifier: Modifier,
+    tabIndex: Int,
+    tabData:List<String>,
+    onTabSwitch: (Int, String) -> Unit
+) {
+    TabRow(
+        modifier = modifier,
+        selectedTabIndex = tabIndex
+    ) {
         tabData.forEachIndexed { index, text ->
             Tab(selected = tabIndex == index,
-                onClick = { tabIndex = index },
+                onClick = {
+                    onTabSwitch(index, text)
+                          },
                 text = { Text(text = text) })
         }
     }
 }
 
+//　TimeLogの情報を表示
 @Composable
-fun TimeRecordRow(
+fun TimeLogRow(
     id: Int,
     contentType: String,
     content: String,
@@ -313,6 +365,7 @@ fun TimeRecordRow(
     }
 }
 
+// TimeDialogのための色セット
 @Composable
 private fun getColors(dialogColor: Color): TimePickerColors {
     val colors: TimePickerColors = if (isSystemInDarkTheme()) {
@@ -333,45 +386,10 @@ private fun getColors(dialogColor: Color): TimePickerColors {
     return colors
 }
 
+// Dialogのボタン
 @Composable
 private fun MaterialDialogButtons.DefaultDateTimeDialogButtons() {
     positiveButton("OK")
     negativeButton("Cancel")
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-private fun getLocalDateTime(date: LocalDate?, time: LocalTime?): LocalDateTime? {
-    return if ((date != null) && (time != null)) {
-        LocalDateTime.of(date, time)
-    } else {
-        null
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-fun insertTimeRecord(
-    contentType: String = "", timeContent: String = "",
-    fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
-    viewModel: TimeRecordViewModel
-) {
-    if (
-        (fromDateTime != null) // 開始時刻がnullでない
-        && (untilDateTime != null) // 終了時刻がnullでない
-        && (untilDateTime > fromDateTime) // 開始時間が終了時間より先
-        && (ChronoUnit.MINUTES.between(untilDateTime, fromDateTime) < 24*60) // 開始時刻と終了時刻の差が1日以内
-    ) {
-        // TimeRecordをデータベースに挿入
-        viewModel.insertTimeRecord(
-            TimeRecord(
-                contentType = contentType.ifBlank { "不明" },
-                timeContent = timeContent.ifBlank { "不明" },
-                fromDateTime = fromDateTime,
-                untilDateTime = untilDateTime
-            )
-        )
-    } else {
-        // ログで通知
-        Log.e("insertTimeRecord", "Invalid time record")
-
-    }
-}

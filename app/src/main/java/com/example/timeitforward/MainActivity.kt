@@ -32,15 +32,16 @@ class MainActivity : ComponentActivity() {
                     val owner = LocalViewModelStoreOwner.current
 
                     owner?.let {
-                        val viewModel: TimeRecordViewModel = viewModel(
+                        val viewModel: TimeLogViewModel = viewModel(
                             it,
                             "MainViewModel",
-                            TimeRecordViewModelFactory(
+                            TimeLogViewModelFactory(
                                 LocalContext.current.applicationContext
                                         as Application
                             )
                         )
-                        TimeWriteScreenSetup(viewModel)
+                        loadLogs(viewModel)
+                        InputScreenSetup(viewModel)
                     }
                 }
             }
@@ -48,10 +49,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-class TimeRecordViewModelFactory(private val application: Application) :
+class TimeLogViewModelFactory(private val application: Application) :
     ViewModelProvider.Factory {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return TimeRecordViewModel(application) as T
+        return TimeLogViewModel(application) as T
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun loadLogs(viewModel: TimeLogViewModel) {
+    loadAppLogs(viewModel = viewModel)
+    loadSleepLogs(viewModel = viewModel)
 }
