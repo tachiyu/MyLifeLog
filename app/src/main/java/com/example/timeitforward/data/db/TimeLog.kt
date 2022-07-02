@@ -1,4 +1,4 @@
-package com.example.timeitforward.db
+package com.example.timeitforward.data.db
 
 import android.os.Build
 import androidx.annotation.NonNull

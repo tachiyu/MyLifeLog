@@ -7,7 +7,8 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.timeitforward.db.TimeLog
+import com.example.timeitforward.data.TimeLogRepository
+import com.example.timeitforward.data.db.TimeLog
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
