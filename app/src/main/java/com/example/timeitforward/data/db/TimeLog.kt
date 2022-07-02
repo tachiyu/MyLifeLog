@@ -1,14 +1,12 @@
 package com.example.timeitforward.data.db
 
-import android.os.Build
 import androidx.annotation.NonNull
-import androidx.annotation.RequiresApi
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDateTime
 
-@RequiresApi(Build.VERSION_CODES.O)
+
 @Entity(tableName="time_logs")
 class TimeLog
     (

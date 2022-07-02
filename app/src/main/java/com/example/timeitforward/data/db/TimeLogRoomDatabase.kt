@@ -1,14 +1,12 @@
 package com.example.timeitforward
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.room.*
 import com.example.timeitforward.data.db.TimeLog
 import com.example.timeitforward.data.db.TimeLogDao
 import java.time.LocalDateTime
 
-@RequiresApi(Build.VERSION_CODES.O)
+
 @TypeConverters(DateTimeConverter::class)
 @Database(entities = [(TimeLog::class)], version = 1, exportSchema = false)
 abstract class TimeLogRoomDatabase: RoomDatabase() {
@@ -39,7 +37,7 @@ abstract class TimeLogRoomDatabase: RoomDatabase() {
 }
 
 class DateTimeConverter {
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     @TypeConverter
     fun fromLocalDateTime(value: String?): LocalDateTime? {
         return if (value == null) null else LocalDateTime.parse(value)

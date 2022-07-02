@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.timeitforward"
-        minSdk 21
+        minSdk 28
         targetSdk 32
         versionCode 1
         versionName "1.0"
@@ -60,7 +60,7 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
-
+    // UI & Room
     implementation "io.github.vanpra.compose-material-dialogs:datetime:0.8.0-beta"
     implementation "androidx.room:room-runtime:2.4.2"
     implementation "androidx.room:room-ktx:2.4.2"
@@ -70,4 +70,8 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.4.1'
+    // Permission
+    implementation 'com.vmadalin:easypermissions-ktx:1.0.0'
+    // Sleep API
+    implementation 'com.google.android.gms:play-services-location:20.0.0'
 }

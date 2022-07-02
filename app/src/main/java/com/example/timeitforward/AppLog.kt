@@ -1,20 +1,19 @@
 package com.example.timeitforward
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+import java.time.LocalDateTime
 
 // アプリ起動時or更新ボタン押下時にアプリのログをとってきてinsertTimeLogでデータベースに保存する。
-@RequiresApi(Build.VERSION_CODES.O)
+
 fun loadAppLogs(viewModel: TimeLogViewModel) {
 
 //* TODO
 //
 //
-//    insertTimeLog(
-//        contentType = "アプリ",
-//        timeContent = "", // アプリの名前
-//        fromDateTime = , // 開始時間
-//        untilDateTime = ,// 終了時間
-//        viewModel = viewModel
-//    )
+    insertTimeLog(
+        contentType = R.string.app.toString(),
+        timeContent = "", // アプリの名前
+        fromDateTime = LocalDateTime.MIN, // 開始時間
+        untilDateTime = LocalDateTime.MIN,// 終了時間
+        viewModel = viewModel
+    )
 }

@@ -1,7 +1,5 @@
 package com.example.timeitforward
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -16,17 +14,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.timeitforward.data.db.TimeLog
-import com.vanpra.composematerialdialogs.*
+import com.vanpra.composematerialdialogs.MaterialDialog
+import com.vanpra.composematerialdialogs.MaterialDialogButtons
+import com.vanpra.composematerialdialogs.MaterialDialogScope
 import com.vanpra.composematerialdialogs.datetime.date.DatePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
 import com.vanpra.composematerialdialogs.datetime.time.TimePickerColors
 import com.vanpra.composematerialdialogs.datetime.time.TimePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
+import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
-@RequiresApi(Build.VERSION_CODES.O)
+
 @Composable
 fun InputScreenSetup(viewModel: TimeLogViewModel) {
     val searchResults by viewModel.searchResults.observeAsState(listOf())
@@ -37,7 +38,7 @@ fun InputScreenSetup(viewModel: TimeLogViewModel) {
     )
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
+
 @Composable
 fun InputScreen(
     searchResults: List<TimeLog>,
@@ -60,10 +61,10 @@ fun InputScreen(
         tabData = tabData
     )
 
-    Column (
+    Column(
         modifier = Modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.SpaceBetween
-    ){
+    ) {
         Button(onClick = {
             loadLogs(viewModel)
             updateSearchResults(
@@ -194,9 +195,9 @@ fun InputScreen(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-private fun updateSearchResults(text:String, viewModel: TimeLogViewModel, tabData: List<String>) {
-    if(text == "その他") {
+
+private fun updateSearchResults(text: String, viewModel: TimeLogViewModel, tabData: List<String>) {
+    if (text == "その他") {
         viewModel.findTimeLogByNotContentTypes(
             tabData.filter { tabText -> tabText != "その他" }
         )
@@ -299,7 +300,7 @@ fun TimeLogDraft(
     fromDate: LocalDate?, fromTime: LocalTime?,
     untilDate: LocalDate?, untilTime: LocalTime?
 ) {
-    Column() {
+    Column {
         Text(
             text = "$contentType $timeContent",
             modifier = Modifier.fillMaxWidth(),
@@ -326,7 +327,7 @@ fun TimeLogDraft(
 fun ContentTypeTabs(
     modifier: Modifier,
     tabIndex: Int,
-    tabData:List<String>,
+    tabData: List<String>,
     onTabSwitch: (Int, String) -> Unit
 ) {
     TabRow(
@@ -337,7 +338,7 @@ fun ContentTypeTabs(
             Tab(selected = tabIndex == index,
                 onClick = {
                     onTabSwitch(index, text)
-                          },
+                },
                 text = { Text(text = text) })
         }
     }

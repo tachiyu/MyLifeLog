@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">TimeItForward</string>
+    <string name="location">場所</string>
+    <string name="app">アプリ</string>
 </resources>

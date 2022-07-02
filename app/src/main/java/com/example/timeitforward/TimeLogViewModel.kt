@@ -1,9 +1,7 @@
 package com.example.timeitforward
 
 import android.app.Application
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,11 +10,10 @@ import com.example.timeitforward.data.db.TimeLog
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-@RequiresApi(Build.VERSION_CODES.O)
 class TimeLogViewModel(application: Application) : ViewModel() {
 
     val allTimeLogs: LiveData<List<TimeLog>>
-    private  val repository: TimeLogRepository
+    private val repository: TimeLogRepository
     val searchResults: MutableLiveData<List<TimeLog>>
 
     init {
@@ -50,7 +47,7 @@ class TimeLogViewModel(application: Application) : ViewModel() {
 }
 
 // TimeLogの保存
-@RequiresApi(Build.VERSION_CODES.O)
+
 fun insertTimeLog(
     contentType: String = "", timeContent: String = "",
     fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
@@ -60,7 +57,7 @@ fun insertTimeLog(
         (fromDateTime != null) // 開始時刻がnullでない
         && (untilDateTime != null) // 終了時刻がnullでない
         && (untilDateTime > fromDateTime) // 開始時間が終了時間より先
-        && (ChronoUnit.MINUTES.between(untilDateTime, fromDateTime) < 24*60) // 開始時刻と終了時刻の差が1日以内
+        && (ChronoUnit.MINUTES.between(untilDateTime, fromDateTime) < 24 * 60) // 開始時刻と終了時刻の差が1日以内
     ) {
         // TimeLogをデータベースに挿入
         viewModel.insertTimeLog(
