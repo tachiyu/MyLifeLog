@@ -2,4 +2,10 @@
     <string name="app_name">TimeItForward</string>
     <string name="location">場所</string>
     <string name="app">アプリ</string>
+    <string name="request_activity_recognition_permission_rational">睡眠情報の自動記録に「身体情報へのアクセス権限」が必要です。
+        取得されたデータは端末内でのみ使用され、外部に送信されることはありません。</string>
+    <string name="request_background_location_permission_rational_API29orAbove29">場所情報の自動記録に「常に場所情報へのアクセス」が必要です。
+        取得されたデータは端末内でのみ使用され、外部に送信されることはありません。</string>
+    <string name="request_background_location_permission_rational_APIUnder29">場所情報の自動記録に「場所情報へのアクセス」が必要です。
+        取得されたデータは端末内でのみ使用され、外部に送信されることはありません。</string>
 </resources>

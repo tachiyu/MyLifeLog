@@ -6,10 +6,7 @@ import java.time.LocalDateTime
 // insertTimeLogでデータベースに保存する
 
 fun insertLocationTimeLogs(viewModel: TimeLogViewModel) {
-
 //* TODO
-//
-
     insertTimeLog(
         contentType = R.string.location.toString(),
         timeContent = "", // 家、会社、電車など…？
@@ -17,5 +14,4 @@ fun insertLocationTimeLogs(viewModel: TimeLogViewModel) {
         untilDateTime = LocalDateTime.MIN,// 終了時間
         viewModel = viewModel
     )
-
 }
