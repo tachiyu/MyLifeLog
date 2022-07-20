@@ -1,7 +1,10 @@
 package com.example.timeitforward.data.db
 
 import androidx.lifecycle.LiveData
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
 import java.time.LocalDateTime
 
 @Dao
@@ -33,4 +36,5 @@ interface TimeLogDao {
 
     @Query("SELECT * FROM time_logs")
     fun getAllTimeLogs(): LiveData<List<TimeLog>>
+
 }
