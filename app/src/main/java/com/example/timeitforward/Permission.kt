@@ -2,10 +2,13 @@ package com.example.timeitforward
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.AppOpsManager
 import android.content.Intent
 import android.os.Build
+import android.os.Process
 import android.provider.Settings
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.vmadalin.easypermissions.EasyPermissions
 
@@ -49,7 +52,7 @@ class Permission(private val activity: MainActivity) {
 
     fun requestUsageStatsPermission() {
         val permissions = arrayOf(Manifest.permission.PACKAGE_USAGE_STATS)
-        if (!EasyPermissions.hasPermissions(activity, *permissions)) {
+        if (!checkUsageStatsPermission()) {
             Log.v("Permission", "Have no permission: ${permissions.joinToString()}")
             AlertDialog.Builder(activity)
                 .setTitle("使用状況へのアクセス")
@@ -69,5 +72,22 @@ class Permission(private val activity: MainActivity) {
                 .setCancelable(true)
                 .show()
         }
+    }
+
+    // True if the permission of usageStatsManager is allowed, else False
+    private fun checkUsageStatsPermission(): Boolean {
+        val aom: AppOpsManager = activity.getSystemService(AppCompatActivity.APP_OPS_SERVICE) as AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            aom.unsafeCheckOpNoThrow(
+                "android:get_usage_stats",
+                Process.myUid(), activity.packageName
+            )
+        } else {
+            aom.checkOpNoThrow(
+                "android:get_usage_stats",
+                Process.myUid(), activity.packageName
+            )
+        }
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 }

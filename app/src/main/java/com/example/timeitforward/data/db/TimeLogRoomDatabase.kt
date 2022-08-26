@@ -1,9 +1,7 @@
-package com.example.timeitforward
+package com.example.timeitforward.data.db
 
 import android.content.Context
 import androidx.room.*
-import com.example.timeitforward.data.db.TimeLog
-import com.example.timeitforward.data.db.TimeLogDao
 import java.time.LocalDateTime
 
 

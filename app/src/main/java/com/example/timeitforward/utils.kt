@@ -1,8 +1,6 @@
 package com.example.timeitforward
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import java.time.*
 
 // LocalDate, LocaltimeからLocalDateTimeを作製
 fun getLocalDateTime(date: LocalDate?, time: LocalTime?): LocalDateTime? {
@@ -11,6 +9,16 @@ fun getLocalDateTime(date: LocalDate?, time: LocalTime?): LocalDateTime? {
     } else {
         null
     }
+}
+
+// millisecondsからLocalDateTimeに変換
+fun convertMillisecondsToLocalDateTime(milliseconds: Long): LocalDateTime {
+    return Instant.ofEpochMilli(milliseconds).atZone(ZoneId.systemDefault()).toLocalDateTime()
+}
+
+// LocalDateTimeからmillisecondsに変換
+fun convertLocalDateTimeToMilliseconds(localDateTime: LocalDateTime): Long {
+    return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
 // For test (現在使用されてない). 各項目に10万件ログを入れてどうなるか
@@ -28,3 +36,4 @@ private fun insertBigRecords(viewModel: TimeLogViewModel) {
         }
     }
 }
+

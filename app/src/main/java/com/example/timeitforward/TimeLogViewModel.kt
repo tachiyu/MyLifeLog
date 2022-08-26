@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.timeitforward.data.TimeLogRepository
 import com.example.timeitforward.data.db.TimeLog
+import com.example.timeitforward.data.db.TimeLogRoomDatabase
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
@@ -41,6 +42,10 @@ class TimeLogViewModel(application: Application) : ViewModel() {
         repository.findTimeLogByNotContentTypes(contentTypes)
     }
 
+    fun getLastAppLog(app: String): List<TimeLog> {
+        return repository.getLastAppLog(app)
+    }
+
     fun deleteTimeLog(id: Int) {
         repository.deleteTimeLog(id)
     }
@@ -68,6 +73,21 @@ fun insertTimeLog(
                 untilDateTime = untilDateTime
             )
         )
+    } else {
+        // ログで通知
+        Log.e("insertTimeLog", "Invalid time record")
+
+    }
+}
+
+// TimeLogオブジェクトでできる版
+fun insertTimeLog(timeLog: TimeLog, viewModel: TimeLogViewModel) {
+    if (
+        (timeLog.untilDateTime > timeLog.fromDateTime) // 開始時間が終了時間より先
+        && (ChronoUnit.MINUTES.between(timeLog.untilDateTime, timeLog.fromDateTime) < 24 * 60) // 開始時刻と終了時刻の差が1日以内
+    ) {
+        // TimeLogをデータベースに挿入
+        viewModel.insertTimeLog(timeLog)
     } else {
         // ログで通知
         Log.e("insertTimeLog", "Invalid time record")

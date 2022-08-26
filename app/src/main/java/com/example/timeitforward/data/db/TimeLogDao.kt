@@ -29,7 +29,7 @@ interface TimeLogDao {
     fun findOverlappingTimeLogs(
         untilDateTime: LocalDateTime,
         fromDateTime: LocalDateTime
-    ): LiveData<List<TimeLog>>
+    ): List<TimeLog>
 
     @Update
     fun updateTimeLog(TimeLog: TimeLog)
@@ -37,4 +37,9 @@ interface TimeLogDao {
     @Query("SELECT * FROM time_logs")
     fun getAllTimeLogs(): LiveData<List<TimeLog>>
 
+    @Query( "SELECT * FROM time_logs " +
+            "WHERE content_type = :app " +
+            "ORDER BY time_log_id DESC " +
+            "LIMIT 1")
+    fun findLastAppLog(app: String): List<TimeLog>
 }

@@ -14,9 +14,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timeitforward.ui.theme.TimeItForwardTheme
-import com.vmadalin.easypermissions.EasyPermissions
 
-class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
+class MainActivity : ComponentActivity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,9 +23,6 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
         permission.requestUsageStatsPermission()
         permission.requestActivityRecognitionPermission()
         permission.requestBackgroundLocationPermission()
-
-        val appLog = AppLog(this)
-        appLog.readUsageEventsAsTimeLogs()
 
         setContent {
             TimeItForwardTheme {
@@ -48,17 +44,14 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
                             )
                         )
                         loadLogs(viewModel)
+                        val appLog = AppLog(this, viewModel)
+                        appLog.loadAppLogs()
+
                         InputScreenSetup(viewModel)
                     }
                 }
             }
         }
-    }
-
-    override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
-    }
-
-    override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
     }
 }
 
