@@ -36,4 +36,3 @@ private fun insertBigRecords(viewModel: TimeLogViewModel) {
         }
     }
 }
-

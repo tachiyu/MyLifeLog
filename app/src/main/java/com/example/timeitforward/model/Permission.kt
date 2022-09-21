@@ -1,4 +1,4 @@
-package com.example.timeitforward
+package com.example.timeitforward.model
 
 import android.Manifest
 import android.app.AlertDialog
@@ -10,6 +10,8 @@ import android.provider.Settings
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.example.timeitforward.MainActivity
+import com.example.timeitforward.R
 import com.vmadalin.easypermissions.EasyPermissions
 
 // TODO

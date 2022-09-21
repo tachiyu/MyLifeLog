@@ -5,8 +5,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.timeitforward.data.TimeLogRepository
-import com.example.timeitforward.data.db.TimeLog
+import com.example.timeitforward.model.db.TimeLog
 import com.example.timeitforward.data.db.TimeLogRoomDatabase
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit

@@ -1,4 +1,4 @@
-package com.example.timeitforward.data.db
+package com.example.timeitforward.model.db
 
 import androidx.annotation.NonNull
 import androidx.room.ColumnInfo

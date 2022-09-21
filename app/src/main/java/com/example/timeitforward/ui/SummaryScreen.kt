@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import com.example.timeitforward.TimeLogViewModel
-import com.example.timeitforward.data.db.TimeLog
+import com.example.timeitforward.model.db.TimeLog
 
 @Composable
 fun SummaryScreenSetup(viewModel: TimeLogViewModel) {

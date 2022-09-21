@@ -1,6 +1,5 @@
 package com.example.timeitforward
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -12,13 +11,11 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
-import com.example.timeitforward.data.db.TimeLog
+import com.example.timeitforward.model.db.TimeLog
+import com.example.timeitforward.ui.AppIcon
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.MaterialDialogButtons
 import com.vanpra.composematerialdialogs.MaterialDialogScope
@@ -176,7 +173,7 @@ fun InputScreen(
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            items(searchResults) { item ->
+            items(searchResults.reversed()) { item ->
                 TimeLogRow(
                     id = item.id,
                     contentType = item.contentType,
@@ -363,9 +360,7 @@ fun TimeLogRow(
     ) {
         Text(id.toString(), modifier = Modifier.weight(0.1f))
         if (contentType == stringResource(id = R.string.app)) {
-            LocalContext.current.packageManager.getApplicationIcon(content).let{
-                Image(bitmap = it.toBitmap().asImageBitmap(), contentDescription = content)
-            }
+            AppIcon(appName = content, modifier = Modifier.size(40.dp, 40.dp))
         } else {
             Text(contentType, modifier = Modifier.weight(0.1f))
         }

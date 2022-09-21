@@ -1,9 +1,10 @@
-package com.example.timeitforward
+package com.example.timeitforward.model
 
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.util.Log
+import com.example.timeitforward.*
 import java.time.LocalDateTime
 
 // アプリ起動時or更新ボタン押下時にアプリのログをとってきてinsertTimeLogでデータベースに保存する。

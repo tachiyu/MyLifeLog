@@ -1,9 +1,9 @@
-package com.example.timeitforward.data
+package com.example.timeitforward
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.example.timeitforward.data.db.TimeLog
-import com.example.timeitforward.data.db.TimeLogDao
+import com.example.timeitforward.model.db.TimeLog
+import com.example.timeitforward.model.db.TimeLogDao
 import kotlinx.coroutines.*
 
 class TimeLogRepository(private val timeLogDao: TimeLogDao) {
