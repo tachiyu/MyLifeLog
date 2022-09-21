@@ -1,5 +1,6 @@
 package com.example.timeitforward
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -11,8 +12,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.example.timeitforward.data.db.TimeLog
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.MaterialDialogButtons
@@ -44,7 +49,7 @@ fun InputScreen(
     searchResults: List<TimeLog>,
     viewModel: TimeLogViewModel
 ) {
-    val tabData = listOf("場所", "アプリ", "睡眠", "その他")
+    val tabs = listOf("場所", "アプリ", "睡眠", "その他")
     val dialogColor = remember { Color(0xFF3700B3) }
 
     var tabIndex by remember { mutableStateOf(0) }
@@ -56,9 +61,9 @@ fun InputScreen(
     var untilTime: LocalTime? by remember { mutableStateOf(null) }
 
     updateSearchResults(
-        text = tabData[tabIndex],
+        text = tabs[tabIndex],
         viewModel = viewModel,
-        tabData = tabData
+        tabData = tabs
     )
 
     Column(
@@ -66,11 +71,10 @@ fun InputScreen(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Button(onClick = {
-            loadLogs(viewModel)
             updateSearchResults(
-                text = tabData[tabIndex],
+                text = tabs[tabIndex],
                 viewModel = viewModel,
-                tabData = tabData
+                tabData = tabs
             )
         }) {
             Text("すべて更新")
@@ -152,9 +156,9 @@ fun InputScreen(
                     viewModel = viewModel
                 )
                 updateSearchResults(
-                    text = tabData[tabIndex],
+                    text = tabs[tabIndex],
                     viewModel = viewModel,
-                    tabData = tabData
+                    tabData = tabs
                 )
             }
         ) {
@@ -184,14 +188,13 @@ fun InputScreen(
         }
         ContentTypeTabs(
             tabIndex = tabIndex,
-            tabData = tabData,
+            tabData = tabs,
             modifier = Modifier.weight(0.5f),
             onTabSwitch = { index, text ->
                 tabIndex = index
-                updateSearchResults(text, viewModel, tabData)
+                updateSearchResults(text, viewModel, tabs)
             }
         )
-
     }
 }
 
@@ -359,7 +362,13 @@ fun TimeLogRow(
             .padding(5.dp)
     ) {
         Text(id.toString(), modifier = Modifier.weight(0.1f))
-        Text(contentType, modifier = Modifier.weight(0.1f))
+        if (contentType == stringResource(id = R.string.app)) {
+            LocalContext.current.packageManager.getApplicationIcon(content).let{
+                Image(bitmap = it.toBitmap().asImageBitmap(), contentDescription = content)
+            }
+        } else {
+            Text(contentType, modifier = Modifier.weight(0.1f))
+        }
         Text(content, modifier = Modifier.weight(0.2f))
         Text(text = fromDateTime.toString(), modifier = Modifier.weight(0.2f))
         Text(text = untilDateTime.toString(), modifier = Modifier.weight(0.2f))

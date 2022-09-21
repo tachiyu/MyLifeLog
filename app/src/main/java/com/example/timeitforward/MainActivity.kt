@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // パーミッションの確認・パーミッションが無ければユーザーに許可を求める
         val permission = Permission(this)
         permission.requestUsageStatsPermission()
         permission.requestActivityRecognitionPermission()
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity(){
                     val owner = LocalViewModelStoreOwner.current
 
                     owner?.let {
+                        // viewModelの作製・Appの起動
                         val viewModel: TimeLogViewModel = viewModel(
                             it,
                             "MainViewModel",
@@ -43,11 +45,7 @@ class MainActivity : ComponentActivity(){
                                         as Application
                             )
                         )
-                        loadLogs(viewModel)
-                        val appLog = AppLog(this, viewModel)
-                        appLog.loadAppLogs()
-
-                        InputScreenSetup(viewModel)
+                        App(viewModel = viewModel)
                     }
                 }
             }
@@ -61,8 +59,4 @@ class TimeLogViewModelFactory(private val application: Application) :
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return TimeLogViewModel(application) as T
     }
-}
-
-fun loadLogs(viewModel: TimeLogViewModel) {
-    loadSleepLogs(viewModel = viewModel)
 }

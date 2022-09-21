@@ -10,4 +10,6 @@
         取得されたデータはこのアプリ内でのみ使用され、外部に送信されることはありません。</string>
     <string name="request_usage_stats_permission_rational">スマホ使用状況の自動記録に「使用状況へのアクセス」が必要です。
         取得されたデータはこのアプリ内でのみ使用され、外部に送信されることはありません。</string>
+    <string name="INPUT">入力</string>
+    <string name="SUMMARY">集計</string>
 </resources>
