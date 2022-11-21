@@ -21,7 +21,7 @@ class AppLog(private val activity: MainActivity, private val viewModel: TimeLogV
 
         val contentType: String = app
         var timeContent = ""
-        var fromDateTime: LocalDateTime = convertMillisecondsToLocalDateTime(0) //初期値は使わないがコンパイルエラー回避
+        var fromDateTime: LocalDateTime = LocalDateTime.MIN //初期値は使わないがコンパイルエラー回避
         var untilDateTime: LocalDateTime
 
         while (usageEvents.hasNextEvent()) {
@@ -36,7 +36,7 @@ class AppLog(private val activity: MainActivity, private val viewModel: TimeLogV
                         }
                     } else {
                         timeContent = event.packageName
-                        fromDateTime = convertMillisecondsToLocalDateTime(event.timeStamp)
+                        fromDateTime = event.timeStamp.toLocalDateTime()
                     }
                     isForeground = true
                 } else if (event.eventType==UsageEvents.Event.ACTIVITY_PAUSED){
@@ -44,7 +44,7 @@ class AppLog(private val activity: MainActivity, private val viewModel: TimeLogV
                         if (timeContent != event.packageName) {
                           Log.e(tag, "timeContent miss match $timeContent, ${event.packageName}")
                         }
-                        untilDateTime = convertMillisecondsToLocalDateTime(event.timeStamp)
+                        untilDateTime = event.timeStamp.toLocalDateTime()
                         insertTimeLog(
                             contentType = contentType,
                             timeContent = timeContent,
@@ -63,13 +63,9 @@ class AppLog(private val activity: MainActivity, private val viewModel: TimeLogV
 
     // Roomに保存されているAppログの中で最新のログのバックグラウンド移動時刻を取得
     private fun getLastUpdatedTime(): LocalDateTime {
-        val lastAppLog =  viewModel.getLastAppLog(app)
+        val lastAppLog = viewModel.getLastLogInContent(app)
         Log.d(tag, "app: $app")
-        val ret = if (lastAppLog.isNotEmpty()) {
-            lastAppLog[0].untilDateTime
-        } else {
-            convertMillisecondsToLocalDateTime(0)
-        }
+        val ret = lastAppLog?.untilDateTime ?: 0.toLong().toLocalDateTime()
         Log.d(tag, "getLastUpdatedTime: $ret")
         return ret
     }
@@ -80,7 +76,7 @@ class AppLog(private val activity: MainActivity, private val viewModel: TimeLogV
             activity.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
         return usageStatsManager.queryEvents(
-            convertLocalDateTimeToMilliseconds(startTime),
+            startTime.toMilliSec(),
             System.currentTimeMillis()
         )
     }

@@ -18,7 +18,8 @@ import com.example.timeitforward.ui.MyNavHost
 @Composable
 fun App(viewModel: TimeLogViewModel) {
     val navController = rememberNavController()
-    Scaffold(bottomBar = { NavBottomBar(navController = navController) }) {
+    Scaffold(bottomBar = {NavBottomBar(navController = navController)})
+    {
         innerPaddingModifier ->
         MyNavHost(viewModel = viewModel,
             navController = navController,
@@ -31,7 +32,6 @@ fun NavBottomBar(navController: NavHostController) {
     val tabs = DESTINATIONS.values()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-//        ?: CourseTabs.FEATURED.route
 
     BottomNavigation (
         modifier = Modifier,

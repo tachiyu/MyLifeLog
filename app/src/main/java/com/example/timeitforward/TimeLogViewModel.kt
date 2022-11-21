@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.timeitforward.model.db.TimeLog
 import com.example.timeitforward.data.db.TimeLogRoomDatabase
+import com.example.timeitforward.model.db.TimeLog
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
@@ -29,6 +29,16 @@ class TimeLogViewModel(application: Application) : ViewModel() {
         repository.insertTimeLog(timeLog)
     }
 
+    fun findTimeLogByDateTime(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime) {
+        repository.findTimeLogBetweenDateTimes(fromDateTime, untilDateTime)
+    }
+
+    fun findTimeLogOfContentTypeBetweenDateTimes(fromDateTime: LocalDateTime,
+                                                 untilDateTime: LocalDateTime,
+                                                 contentType: String) {
+        repository.findTimeLogOfContentTypeBetweenDateTimes(fromDateTime, untilDateTime, contentType)
+    }
+
     fun findTimeLogByContent(content: String) {
         repository.findTimeLogByContent(content)
     }
@@ -41,8 +51,16 @@ class TimeLogViewModel(application: Application) : ViewModel() {
         repository.findTimeLogByNotContentTypes(contentTypes)
     }
 
-    fun getLastAppLog(app: String): List<TimeLog> {
-        return repository.getLastAppLog(app)
+    fun getLastLogInContent(contentType: String): TimeLog? {
+        return repository.getLastLogInContentType(contentType)
+    }
+
+    fun getFistLogInContent(contentType: String): TimeLog? {
+        return repository.getFirstLogInContentType(contentType)
+    }
+
+    fun getFistLog(): TimeLog? {
+        return repository.getFirstLog()
     }
 
     fun deleteTimeLog(id: Int) {
@@ -50,8 +68,8 @@ class TimeLogViewModel(application: Application) : ViewModel() {
     }
 }
 
-// TimeLogの保存
 
+// TimeLogの保存
 fun insertTimeLog(
     contentType: String = "", timeContent: String = "",
     fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
@@ -78,7 +96,6 @@ fun insertTimeLog(
 
     }
 }
-
 // TimeLogオブジェクトでできる版
 fun insertTimeLog(timeLog: TimeLog, viewModel: TimeLogViewModel) {
     if (

@@ -37,9 +37,35 @@ interface TimeLogDao {
     @Query("SELECT * FROM time_logs")
     fun getAllTimeLogs(): LiveData<List<TimeLog>>
 
+    @Query("SELECT * FROM time_logs " +
+           "WHERE :fromDateTime <= until_datetime " +
+            "AND :untilDateTime >= from_datetime")
+    fun findTimeLogBetweenDateTimes(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime)
+    : List<TimeLog>
+
+    @Query("SELECT * FROM time_logs " +
+            "WHERE :fromDateTime <= until_datetime " +
+            "AND :untilDateTime >= from_datetime " +
+            "AND :contentType == content_type")
+    fun findTimeLogOfContentTypeBetweenDateTimes(
+        fromDateTime: LocalDateTime,
+        untilDateTime: LocalDateTime,
+        contentType: String
+    ): List<TimeLog>
+
     @Query( "SELECT * FROM time_logs " +
-            "WHERE content_type = :app " +
+            "WHERE content_type = :contentType " +
             "ORDER BY time_log_id DESC " +
             "LIMIT 1")
-    fun findLastAppLog(app: String): List<TimeLog>
+    fun findLastLogInContentType(contentType: String): List<TimeLog>
+
+    @Query( "SELECT * FROM time_logs " +
+            "WHERE content_type = :contentType " +
+            "LIMIT 1")
+    fun findFirstLogInContentType(contentType: String): List<TimeLog>
+
+    @Query( "SELECT * FROM time_logs " +
+            "LIMIT 1")
+    fun findFirstLog(): List<TimeLog>
+
 }

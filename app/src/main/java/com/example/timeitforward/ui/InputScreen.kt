@@ -3,8 +3,6 @@ package com.example.timeitforward
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -15,7 +13,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.timeitforward.model.db.TimeLog
-import com.example.timeitforward.ui.AppIcon
+import com.example.timeitforward.ui.TabBar
+import com.example.timeitforward.ui.TimeLogsLazyColumn
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.MaterialDialogButtons
 import com.vanpra.composematerialdialogs.MaterialDialogScope
@@ -26,7 +25,6 @@ import com.vanpra.composematerialdialogs.datetime.time.TimePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
 import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
 
 
@@ -46,10 +44,17 @@ fun InputScreen(
     searchResults: List<TimeLog>,
     viewModel: TimeLogViewModel
 ) {
-    val tabs = listOf("場所", "アプリ", "睡眠", "その他")
     val dialogColor = remember { Color(0xFF3700B3) }
 
-    var tabIndex by remember { mutableStateOf(0) }
+    val contentTabs = listOf(
+        stringResource(id = R.string.app),
+        stringResource(id = R.string.location),
+        stringResource(id = R.string.sleep),
+        stringResource(id = R.string.others)
+    )
+    var contentTabIndex by remember { mutableStateOf(0) }
+
+    // 入力フィールドの値
     var contentType: String by remember { mutableStateOf("") }
     var timeContent: String by remember { mutableStateOf("") }
     var fromDate: LocalDate? by remember { mutableStateOf(null) }
@@ -57,10 +62,10 @@ fun InputScreen(
     var fromTime: LocalTime? by remember { mutableStateOf(null) }
     var untilTime: LocalTime? by remember { mutableStateOf(null) }
 
-    updateSearchResults(
-        text = tabs[tabIndex],
+    updateSearchResultsByContentType(
+        contentType = contentTabs[contentTabIndex],
         viewModel = viewModel,
-        tabData = tabs
+        tabData = contentTabs
     )
 
     Column(
@@ -68,10 +73,10 @@ fun InputScreen(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Button(onClick = {
-            updateSearchResults(
-                text = tabs[tabIndex],
+            updateSearchResultsByContentType(
+                contentType = contentTabs[contentTabIndex],
                 viewModel = viewModel,
-                tabData = tabs
+                tabData = contentTabs
             )
         }) {
             Text("すべて更新")
@@ -152,10 +157,10 @@ fun InputScreen(
                     untilDateTime = untilDateTime,
                     viewModel = viewModel
                 )
-                updateSearchResults(
-                    text = tabs[tabIndex],
+                updateSearchResultsByContentType(
+                    contentType = contentTabs[contentTabIndex],
                     viewModel = viewModel,
-                    tabData = tabs
+                    tabData = contentTabs
                 )
             }
         ) {
@@ -167,42 +172,15 @@ fun InputScreen(
                 color = MaterialTheme.colors.onPrimary
             )
         }
-        LazyColumn(
-            modifier = Modifier
-                .weight(2f)
-                .fillMaxWidth()
-                .padding(10.dp)
-        ) {
-            items(searchResults.reversed()) { item ->
-                TimeLogRow(
-                    id = item.id,
-                    contentType = item.contentType,
-                    content = item.timeContent,
-                    fromDateTime = item.fromDateTime,
-                    untilDateTime = item.untilDateTime
-                )
-            }
-        }
-        ContentTypeTabs(
-            tabIndex = tabIndex,
-            tabData = tabs,
-            modifier = Modifier.weight(0.5f),
-            onTabSwitch = { index, text ->
-                tabIndex = index
-                updateSearchResults(text, viewModel, tabs)
-            }
-        )
-    }
-}
-
-
-private fun updateSearchResults(text: String, viewModel: TimeLogViewModel, tabData: List<String>) {
-    if (text == "その他") {
-        viewModel.findTimeLogByNotContentTypes(
-            tabData.filter { tabText -> tabText != "その他" }
-        )
-    } else {
-        viewModel.findTimeLogByContentType(text)
+        TimeLogsLazyColumn(timeLogs = searchResults.reversed(), modifier = Modifier.weight(2f))
+        TabBar(
+            modifier = Modifier,
+            tabIndex = contentTabIndex,
+            tabData = contentTabs,
+            onTabSwitch = {index, text ->
+                contentTabIndex = index
+                updateSearchResultsByContentType(text, viewModel, contentTabs)
+            })
     }
 }
 
@@ -320,53 +298,6 @@ fun TimeLogDraft(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
-    }
-}
-
-@Composable
-fun ContentTypeTabs(
-    modifier: Modifier,
-    tabIndex: Int,
-    tabData: List<String>,
-    onTabSwitch: (Int, String) -> Unit
-) {
-    TabRow(
-        modifier = modifier,
-        selectedTabIndex = tabIndex
-    ) {
-        tabData.forEachIndexed { index, text ->
-            Tab(selected = tabIndex == index,
-                onClick = {
-                    onTabSwitch(index, text)
-                },
-                text = { Text(text = text) })
-        }
-    }
-}
-
-//　TimeLogの情報を表示
-@Composable
-fun TimeLogRow(
-    id: Int,
-    contentType: String,
-    content: String,
-    fromDateTime: LocalDateTime,
-    untilDateTime: LocalDateTime
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(5.dp)
-    ) {
-        Text(id.toString(), modifier = Modifier.weight(0.1f))
-        if (contentType == stringResource(id = R.string.app)) {
-            AppIcon(appName = content, modifier = Modifier.size(40.dp, 40.dp))
-        } else {
-            Text(contentType, modifier = Modifier.weight(0.1f))
-        }
-        Text(content, modifier = Modifier.weight(0.2f))
-        Text(text = fromDateTime.toString(), modifier = Modifier.weight(0.2f))
-        Text(text = untilDateTime.toString(), modifier = Modifier.weight(0.2f))
     }
 }
 

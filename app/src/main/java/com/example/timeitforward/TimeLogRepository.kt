@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import com.example.timeitforward.model.db.TimeLog
 import com.example.timeitforward.model.db.TimeLogDao
 import kotlinx.coroutines.*
+import java.time.LocalDateTime
 
 class TimeLogRepository(private val timeLogDao: TimeLogDao) {
 
@@ -49,11 +50,55 @@ class TimeLogRepository(private val timeLogDao: TimeLogDao) {
         }
     }
 
-    fun getLastAppLog(app: String): List<TimeLog> {
-        return runBlocking {
-            coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findLastAppLog(app)
+    fun findTimeLogBetweenDateTimes(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime) {
+        coroutineScope.launch(Dispatchers.Main) {
+            searchResults.value = coroutineScope.async(Dispatchers.IO) {
+                return@async timeLogDao.findTimeLogBetweenDateTimes(fromDateTime, untilDateTime)
             }.await()
         }
     }
+
+    fun findTimeLogOfContentTypeBetweenDateTimes(
+        fromDateTime: LocalDateTime,
+        untilDateTime: LocalDateTime,
+        content_type: String
+    ) { coroutineScope.launch(Dispatchers.Main) {
+            searchResults.value = coroutineScope.async(Dispatchers.IO) {
+                return@async timeLogDao.findTimeLogOfContentTypeBetweenDateTimes(
+                    fromDateTime, untilDateTime, content_type
+                )
+            }.await()
+        }
+    }
+
+    fun getLastLogInContentType(content_type: String): TimeLog? {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async timeLogDao.findLastLogInContentType(content_type).let {
+                    if (it.isEmpty()) { null } else { it[0] }
+                }
+            }.await()
+        }
+    }
+
+    fun getFirstLogInContentType(content_type: String): TimeLog? {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async timeLogDao.findFirstLogInContentType(content_type).let {
+                    if (it.isEmpty()) { null } else { it[0] }
+                }
+            }.await()
+        }
+    }
+
+    fun getFirstLog(): TimeLog? {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async timeLogDao.findFirstLog().let {
+                    if (it.isEmpty()) { null } else { it[0] }
+                }
+            }.await()
+        }
+    }
+
 }
