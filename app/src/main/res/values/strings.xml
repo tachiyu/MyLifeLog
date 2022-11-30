@@ -17,4 +17,5 @@
         取得されたデータはこのアプリ内でのみ使用され、外部に送信されることはありません。</string>
     <string name="INPUT">入力</string>
     <string name="SUMMARY">集計</string>
+    <string name="SETTING">設定</string>
 </resources>

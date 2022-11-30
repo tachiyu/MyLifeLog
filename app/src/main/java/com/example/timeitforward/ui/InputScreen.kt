@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.timeitforward.model.db.TimeLog
+import com.example.timeitforward.model.db.timelog.TimeLog
 import com.example.timeitforward.ui.TabBar
 import com.example.timeitforward.ui.TimeLogsLazyColumn
 import com.vanpra.composematerialdialogs.MaterialDialog
@@ -29,7 +29,7 @@ import java.time.LocalTime
 
 
 @Composable
-fun InputScreenSetup(viewModel: TimeLogViewModel) {
+fun InputScreenSetup(viewModel: MainViewModel) {
     val searchResults by viewModel.searchResults.observeAsState(listOf())
 
     InputScreen(
@@ -42,7 +42,7 @@ fun InputScreenSetup(viewModel: TimeLogViewModel) {
 @Composable
 fun InputScreen(
     searchResults: List<TimeLog>,
-    viewModel: TimeLogViewModel
+    viewModel: MainViewModel
 ) {
     val dialogColor = remember { Color(0xFF3700B3) }
 

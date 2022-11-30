@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 // backgroundで定期的に場所のログを取得して、解析し
 // insertTimeLogでデータベースに保存する
 
-fun insertLocationTimeLogs(viewModel: TimeLogViewModel) {
+fun insertLocationTimeLogs(viewModel: MainViewModel) {
 //* TODO
     insertTimeLog(
         contentType = R.string.location.toString(),

@@ -1,4 +1,4 @@
-package com.example.timeitforward.model.db
+package com.example.timeitforward.model.db.timelog
 
 import androidx.annotation.NonNull
 import androidx.room.ColumnInfo
@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 import java.time.LocalDateTime
 
 
-@Entity(tableName="time_logs")
+@Entity(tableName="time_log")
 class TimeLog
     (
     @ColumnInfo(name = "content_type") var contentType: String,

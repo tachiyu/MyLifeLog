@@ -5,66 +5,79 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.timeitforward.data.db.TimeLogRoomDatabase
-import com.example.timeitforward.model.db.TimeLog
+import com.example.timeitforward.model.db.MainRoomDatabase
+import com.example.timeitforward.model.db.timelog.TimeLog
+import com.example.timeitforward.model.db.timelog.TimeLogRepository
+import com.example.timeitforward.model.db.transition.Transition
+import com.example.timeitforward.model.db.transition.TransitionRepository
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-class TimeLogViewModel(application: Application) : ViewModel() {
+class MainViewModel(application: Application) : ViewModel() {
 
     val allTimeLogs: LiveData<List<TimeLog>>
-    private val repository: TimeLogRepository
+    private val timeLogRepository: TimeLogRepository
     val searchResults: MutableLiveData<List<TimeLog>>
 
-    init {
-        val timeLogDb = TimeLogRoomDatabase.getInstance(application)
-        val timeLogDao = timeLogDb.TimeLogDao()
-        repository = TimeLogRepository(timeLogDao)
+    val allTransitions: LiveData<List<Transition>>
+    private val transitionRepository: TransitionRepository
 
-        allTimeLogs = repository.allTimeLogs
-        searchResults = repository.searchResults
+    init {
+        val db = MainRoomDatabase.getInstance(application)
+        val timeLogDao = db.TimeLogDao()
+        val transitionDao = db.TransitionDao()
+        timeLogRepository = TimeLogRepository(timeLogDao)
+        transitionRepository = TransitionRepository(transitionDao)
+
+        allTimeLogs = timeLogRepository.allTimeLogs
+        searchResults = timeLogRepository.searchResults
+        allTransitions = transitionRepository.allTransition
     }
 
     fun insertTimeLog(timeLog: TimeLog) {
-        repository.insertTimeLog(timeLog)
+        timeLogRepository.insertTimeLog(timeLog)
     }
 
     fun findTimeLogByDateTime(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime) {
-        repository.findTimeLogBetweenDateTimes(fromDateTime, untilDateTime)
+        timeLogRepository.findTimeLogBetweenDateTimes(fromDateTime, untilDateTime)
     }
 
     fun findTimeLogOfContentTypeBetweenDateTimes(fromDateTime: LocalDateTime,
                                                  untilDateTime: LocalDateTime,
                                                  contentType: String) {
-        repository.findTimeLogOfContentTypeBetweenDateTimes(fromDateTime, untilDateTime, contentType)
+        timeLogRepository.findTimeLogOfContentTypeBetweenDateTimes(fromDateTime, untilDateTime, contentType)
     }
 
     fun findTimeLogByContent(content: String) {
-        repository.findTimeLogByContent(content)
+        timeLogRepository.findTimeLogByContent(content)
     }
 
     fun findTimeLogByContentType(contentType: String) {
-        repository.findTimeLogByContentType(contentType)
+        timeLogRepository.findTimeLogByContentType(contentType)
     }
 
     fun findTimeLogByNotContentTypes(contentTypes: List<String>) {
-        repository.findTimeLogByNotContentTypes(contentTypes)
+        timeLogRepository.findTimeLogByNotContentTypes(contentTypes)
     }
 
     fun getLastLogInContent(contentType: String): TimeLog? {
-        return repository.getLastLogInContentType(contentType)
+        return timeLogRepository.getLastLogInContentType(contentType)
     }
 
     fun getFistLogInContent(contentType: String): TimeLog? {
-        return repository.getFirstLogInContentType(contentType)
+        return timeLogRepository.getFirstLogInContentType(contentType)
     }
 
     fun getFistLog(): TimeLog? {
-        return repository.getFirstLog()
+        return timeLogRepository.getFirstLog()
     }
 
     fun deleteTimeLog(id: Int) {
-        repository.deleteTimeLog(id)
+        timeLogRepository.deleteTimeLog(id)
+    }
+
+    fun insertTransition(transition: Transition) {
+        transitionRepository.insertTransition(transition)
     }
 }
 
@@ -73,7 +86,7 @@ class TimeLogViewModel(application: Application) : ViewModel() {
 fun insertTimeLog(
     contentType: String = "", timeContent: String = "",
     fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
-    viewModel: TimeLogViewModel
+    viewModel: MainViewModel
 ) {
     if (
         (fromDateTime != null) // 開始時刻がnullでない
@@ -97,7 +110,7 @@ fun insertTimeLog(
     }
 }
 // TimeLogオブジェクトでできる版
-fun insertTimeLog(timeLog: TimeLog, viewModel: TimeLogViewModel) {
+fun insertTimeLog(timeLog: TimeLog, viewModel: MainViewModel) {
     if (
         (timeLog.untilDateTime > timeLog.fromDateTime) // 開始時間が終了時間より先
         && (ChronoUnit.MINUTES.between(timeLog.untilDateTime, timeLog.fromDateTime) < 24 * 60) // 開始時刻と終了時刻の差が1日以内
@@ -109,4 +122,8 @@ fun insertTimeLog(timeLog: TimeLog, viewModel: TimeLogViewModel) {
         Log.e("insertTimeLog", "Invalid time record")
 
     }
+}
+
+fun insertTransition(transition: Transition, viewModel: MainViewModel) {
+    viewModel.insertTransition(transition)
 }

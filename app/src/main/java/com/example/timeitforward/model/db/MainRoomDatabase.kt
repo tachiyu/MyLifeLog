@@ -1,31 +1,34 @@
-package com.example.timeitforward.data.db
+package com.example.timeitforward.model.db
 
 import android.content.Context
 import androidx.room.*
-import com.example.timeitforward.model.db.TimeLog
-import com.example.timeitforward.model.db.TimeLogDao
+import com.example.timeitforward.model.db.timelog.TimeLog
+import com.example.timeitforward.model.db.timelog.TimeLogDao
+import com.example.timeitforward.model.db.transition.Transition
+import com.example.timeitforward.model.db.transition.TransitionDao
 import java.time.LocalDateTime
 
 
 @TypeConverters(DateTimeConverter::class)
-@Database(entities = [(TimeLog::class)], version = 1, exportSchema = false)
-abstract class TimeLogRoomDatabase: RoomDatabase() {
+@Database(entities = [(TimeLog::class), (Transition::class)], version = 1, exportSchema = false)
+abstract class MainRoomDatabase: RoomDatabase() {
 
     abstract fun TimeLogDao(): TimeLogDao
+    abstract fun TransitionDao(): TransitionDao
 
     companion object {
 
-        private  var INSTANCE: TimeLogRoomDatabase? = null
+        private  var INSTANCE: MainRoomDatabase? = null
 
-        fun getInstance(context: Context): TimeLogRoomDatabase {
+        fun getInstance(context: Context): MainRoomDatabase {
             synchronized(this) {
                 var instance = INSTANCE
 
                 if (instance == null) {
                     instance = Room.databaseBuilder(
                         context.applicationContext,
-                        TimeLogRoomDatabase::class.java,
-                        "time_log_database"
+                        MainRoomDatabase::class.java,
+                        "my_database"
                     ).fallbackToDestructiveMigration().build()
 
                     INSTANCE = instance

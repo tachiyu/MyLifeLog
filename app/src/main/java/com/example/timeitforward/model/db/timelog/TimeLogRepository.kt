@@ -1,9 +1,7 @@
-package com.example.timeitforward
+package com.example.timeitforward.model.db.timelog
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.example.timeitforward.model.db.TimeLog
-import com.example.timeitforward.model.db.TimeLogDao
 import kotlinx.coroutines.*
 import java.time.LocalDateTime
 

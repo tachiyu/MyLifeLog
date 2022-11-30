@@ -39,10 +39,10 @@ class MainActivity : ComponentActivity(){
 
                     owner?.let {
                         // viewModelの作製・Appの起動
-                        val viewModel: TimeLogViewModel = viewModel(
+                        val viewModel: MainViewModel = viewModel(
                             it,
                             "MainViewModel",
-                            TimeLogViewModelFactory(
+                            MainViewModelFactory(
                                 LocalContext.current.applicationContext
                                         as Application
                             )
@@ -57,10 +57,10 @@ class MainActivity : ComponentActivity(){
     }
 }
 
-class TimeLogViewModelFactory(private val application: Application) :
+class MainViewModelFactory(private val application: Application) :
     ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return TimeLogViewModel(application) as T
+        return MainViewModel(application) as T
     }
 }

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.timeitforward.R
 import com.example.timeitforward.getAppName
-import com.example.timeitforward.model.db.TimeLog
+import com.example.timeitforward.model.db.timelog.TimeLog
 import java.time.LocalDateTime
 
 // アプリの名前からアイコンイメージを取得

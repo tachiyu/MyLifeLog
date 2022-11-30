@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.DropdownMenu
@@ -20,7 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.timeitforward.*
 import com.example.timeitforward.R
-import com.example.timeitforward.model.db.TimeLog
+import com.example.timeitforward.model.db.timelog.TimeLog
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -28,7 +30,7 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 @Composable
-fun SummaryScreenSetup(viewModel: TimeLogViewModel) {
+fun SummaryScreenSetup(viewModel: MainViewModel) {
     val searchResults by viewModel.searchResults.observeAsState(listOf())
     //searchResultsを、contextTypeで、fromDateの00:00からuntilDateの23:59までに動いていたTimeLogのリストに更新する
     fun updateSearchResults(fromDate:LocalDate, untilDate:LocalDate, contentType: String){
@@ -60,20 +62,38 @@ fun SummaryScreen(
         stringResource(id = R.string.others)
     )
     var contentTabIndex by remember { mutableStateOf(0) }
-
+    val contentType = contentTabs[contentTabIndex]
     val currentDate = LocalDate.now(ZoneId.systemDefault()) //現在の日付
 
     Column(
         modifier = Modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.Bottom
     ) {
-        when (summaryDurationTabIndex) {
-            0 -> MonthPage(Modifier.weight(2f), currentDate, firstDate, searchResults,
-                onDateSpanSelected={ fromDate, untilDate -> updateSearchResults(fromDate, untilDate, contentTabs[contentTabIndex]) })
-            1 -> WeekPage(Modifier.weight(2f), currentDate, firstDate, searchResults,
-                onDateSpanSelected={ fromDate, untilDate -> updateSearchResults(fromDate, untilDate, contentTabs[contentTabIndex]) })
-            2 -> DayPage(Modifier.weight(2f), currentDate, firstDate, searchResults,
-                onDateSpanSelected={ fromDate, untilDate -> updateSearchResults(fromDate, untilDate, contentTabs[contentTabIndex]) })
+        when(summaryDurationTabIndex) {
+            0 -> MonthPage(
+                modifier = Modifier.weight(2f),
+                currentDate = currentDate,
+                firstDate = firstDate,
+                searchResults = searchResults,
+                contentType = contentType,
+                updateSearchResults = updateSearchResults
+                )
+            1 -> WeekPage(
+                modifier = Modifier.weight(2f),
+                currentDate = currentDate,
+                firstDate = firstDate,
+                searchResults = searchResults,
+                contentType = contentType,
+                updateSearchResults = updateSearchResults
+            )
+            2 -> DayPage(
+                modifier = Modifier.weight(2f),
+                currentDate = currentDate,
+                firstDate = firstDate,
+                searchResults = searchResults,
+                contentType = contentType,
+                updateSearchResults = updateSearchResults
+            )
         }
         SummaryDurationTabBar(
             modifier = Modifier.height(56.dp),
@@ -91,106 +111,57 @@ fun SummaryScreen(
     }
 }
 
-
-
-
 @Composable
-fun MonthPage(modifier: Modifier,
-              currentDate: LocalDate,
-              firstDate: LocalDate,
-              searchResults: List<TimeLog>,
-              onDateSpanSelected: (LocalDate, LocalDate) -> Unit
+fun DayPage(
+    modifier: Modifier,
+    currentDate: LocalDate,
+    firstDate: LocalDate,
+    searchResults: List<TimeLog>,
+    contentType: String,
+    updateSearchResults: (LocalDate, LocalDate, String) -> Unit,
 ) {
+    val heightAlpha = 2f
     val dateList = mutableListOf<LocalDate>()
-    val currentMonthDay = currentDate.withDayOfMonth(1)
-    val firstMonthDay = firstDate.withDayOfMonth(1)
-    var tmpMonthDay = currentMonthDay
-    while (tmpMonthDay>=firstMonthDay) {
-        dateList.add(tmpMonthDay)
-        tmpMonthDay = tmpMonthDay.minusMonths(1)
+    var tmpDate = currentDate
+    while (tmpDate>=firstDate) {
+        dateList.add(tmpDate)
+        tmpDate = tmpDate.minusDays(1)
     }
-    //PageContent
-    var selectedDate by remember { mutableStateOf(dateList[0]) }
-    val endDate: LocalDate = selectedDate.plusMonths(1).minusDays(1)
-    val timeUnit = TimeUnit.MINUTES.toMillis(1) //分を単位とする
-    onDateSpanSelected(selectedDate, endDate)
-    Column(modifier = modifier) {
-        // 日付選択用のドロップダウンボックス
-        DateSelectionDropDown(dateList = dateList, selectedDate = selectedDate) { date ->
-            selectedDate = date
-            onDateSpanSelected(selectedDate, endDate)
-        }
-
-        var appNameSelected: String by remember{ mutableStateOf("") }
-
-        //時間軸に沿ったログの一覧のlazy column
-        val timeIndices = mutableListOf<LocalDateTime>()
-        var tmpDate = selectedDate
-        while (tmpDate <= endDate){
-            timeIndices.add(LocalDateTime.of(tmpDate, LocalTime.of(0,0)))
-            tmpDate = tmpDate.plusDays(1)
-        }
-        val timeLine: List<TimeLog> = searchResults
-            .toCloseConcatenated(timeUnit)
-            .toTimeGapFilled(
-                LocalDateTime.of(selectedDate, LocalTime.MIN),
-                LocalDateTime.of(endDate, LocalTime.MAX)
-            )
-            .toTimeIndexInserted(timeIndices)
-        LazyColumn(modifier = Modifier.weight(2f)) {
-            items(timeLine) { item ->
-                TimeLogLine(timeLog = item, timeUnit = timeUnit, heightAlpha = 2f/24f,
-                    isPackageNameSelected = appNameSelected == item.timeContent )
-            }
-        }
-
-        // timeLogSummaryのリスト
-        val timeLogSummaryList: List<TimeLogSummary> = searchResults.toTimeLogSummaryList().sorted()
-        LazyColumn(modifier = Modifier
-            .weight(1f)
-            .background(Color(0x446699FF))
-        ) {
-            items(timeLogSummaryList) { item ->
-                TimeLogSummaryRow(
-                    timeLogSummary = item,
-                    onClick = { appNameSelected = if (appNameSelected != item.timeContent) item.timeContent else "" },
-                    non_transparency = if(appNameSelected==item.timeContent) 255 else 128
-                )
-            }
-        }
-    }
+    val calcEndDate: (LocalDate) -> LocalDate = { selectedDate -> selectedDate }
+    val calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>
+            = { selectedDate, _ ->
+        (0..23).toList().map { LocalDateTime.of(selectedDate, LocalTime.of(it, 0)) } }
+    SummaryContent(
+        modifier = modifier,
+        dateList = dateList,
+        calcEndDate = calcEndDate,
+        heightAlpha = heightAlpha,
+        calcTimeIndices = calcTimeIndices,
+        searchResults = searchResults,
+        onDateSpanSelected = { selectedDate, endDate -> updateSearchResults(selectedDate, endDate, contentType) }
+    )
 }
 
 @Composable
-fun WeekPage(modifier: Modifier,
-             currentDate: LocalDate,
-             firstDate: LocalDate,
-             searchResults: List<TimeLog>,
-             onDateSpanSelected: (LocalDate, LocalDate) -> Unit
+fun WeekPage(
+    modifier: Modifier,
+    currentDate: LocalDate,
+    firstDate: LocalDate,
+    searchResults: List<TimeLog>,
+    contentType: String,
+    updateSearchResults: (LocalDate, LocalDate, String) -> Unit,
 ) {
+    val heightAlpha = 2f/6f
     val dateList = mutableListOf<LocalDate>()
-    val currentSunday = currentDate.minusDays(currentDate.dayOfWeek.value.toLong())
-    val firstSunday = firstDate.minusDays(firstDate.dayOfWeek.value.toLong())
-    var tmpSunday = currentSunday
-    while (tmpSunday>=firstSunday) {
+    var tmpSunday = currentDate.minusDays(currentDate.dayOfWeek.value.toLong())
+    while (tmpSunday >= firstDate.minusDays(firstDate.dayOfWeek.value.toLong())) {
         dateList.add(tmpSunday)
         tmpSunday = tmpSunday.minusWeeks(1)
     }
-    //PageContent
-    var selectedDate by remember { mutableStateOf(dateList[0]) }
-    val endDate: LocalDate = selectedDate.plusWeeks(1).minusDays(1)
-    val timeUnit = TimeUnit.MINUTES.toMillis(1) //分を単位とする
-    onDateSpanSelected(selectedDate, endDate)
-    Column(modifier = modifier) {
-        // 日付選択用のドロップダウンボックス
-        DateSelectionDropDown(dateList = dateList, selectedDate = selectedDate) { date ->
-            selectedDate = date
-            onDateSpanSelected(selectedDate, endDate)
-        }
-
-        var appNameSelected: String by remember{ mutableStateOf("") }
-
-        //時間軸に沿ったログの一覧のlazy column
+    val calcEndDate: (LocalDate) -> LocalDate
+            = { selectedDate -> selectedDate.plusWeeks(1).minusDays(1 ) }
+    val calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>
+            = { selectedDate, endDate ->
         val timeIndices = mutableListOf<LocalDateTime>()
         var tmpDate = selectedDate
         while (tmpDate <= endDate){
@@ -199,92 +170,119 @@ fun WeekPage(modifier: Modifier,
             }
             tmpDate = tmpDate.plusDays(1)
         }
-        val timeLine: List<TimeLog> = searchResults
-            .toCloseConcatenated(timeUnit)
+        timeIndices }
+    SummaryContent(
+        modifier = modifier,
+        dateList = dateList,
+        calcEndDate = calcEndDate,
+        heightAlpha = heightAlpha,
+        calcTimeIndices = calcTimeIndices,
+        searchResults = searchResults,
+        onDateSpanSelected = { selectedDate, endDate -> updateSearchResults(selectedDate, endDate, contentType) }
+    )
+}
+
+@Composable
+fun MonthPage(
+    modifier: Modifier,
+    currentDate: LocalDate,
+    firstDate: LocalDate,
+    searchResults: List<TimeLog>,
+    contentType: String,
+    updateSearchResults: (LocalDate, LocalDate, String) -> Unit,
+) {
+    val heightAlpha = 2f/24f
+    val dateList = mutableListOf<LocalDate>()
+    var tmpMonthDay = currentDate.withDayOfMonth(1)
+    while (tmpMonthDay >= firstDate.withDayOfMonth(1)) {
+        dateList.add(tmpMonthDay)
+        tmpMonthDay = tmpMonthDay.minusMonths(1)
+    }
+    val calcEndDate: (LocalDate) -> LocalDate
+            = { selectedDate -> selectedDate.plusMonths(1).minusDays(1 ) }
+    val calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>
+            = { selectedDate, endDate ->
+        val timeIndices = mutableListOf<LocalDateTime>()
+        var tmpDate = selectedDate
+        while (tmpDate <= endDate){
+            timeIndices.add(LocalDateTime.of(tmpDate, LocalTime.of(0,0)))
+            tmpDate = tmpDate.plusDays(1)
+        }
+        timeIndices }
+    SummaryContent(
+        modifier = modifier,
+        dateList = dateList,
+        calcEndDate = calcEndDate,
+        heightAlpha = heightAlpha,
+        calcTimeIndices = calcTimeIndices,
+        searchResults = searchResults,
+        onDateSpanSelected = { selectedDate, endDate -> updateSearchResults(selectedDate, endDate, contentType) }
+    )
+}
+
+
+@Composable
+fun SummaryContent(modifier: Modifier,
+                   dateList: List<LocalDate>,
+                   calcEndDate: (LocalDate) -> LocalDate,
+                   heightAlpha: Float,
+                   calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>,
+                   searchResults: List<TimeLog>,
+                   onDateSpanSelected: (LocalDate, LocalDate) -> Unit
+
+) {
+    var selectedDate by remember { mutableStateOf(dateList[0]) }
+    val endDate = calcEndDate(selectedDate)
+    val timeUnit = TimeUnit.MINUTES.toMillis(1) //分を単位とする
+    onDateSpanSelected(selectedDate, endDate)
+    Column(modifier = modifier) {
+        // 日付選択用のドロップダウンボックス
+        DateSelectionDropDown(dateList = dateList, selectedDate = selectedDate) { date ->
+            selectedDate = date
+            onDateSpanSelected(selectedDate, endDate)
+        }
+
+        var appNameSelected: String by remember{ mutableStateOf("") }
+        val coroutineScope = rememberCoroutineScope()
+        val timeLogSummaryListState = rememberLazyListState()
+
+        val timeIndices = calcTimeIndices(selectedDate, endDate)
+        val timeLine: List<TimeLog> = searchResults.toCloseConcatenated(timeUnit)
             .toTimeGapFilled(
                 LocalDateTime.of(selectedDate, LocalTime.MIN),
                 LocalDateTime.of(endDate, LocalTime.MAX)
             )
             .toTimeIndexInserted(timeIndices)
+
+        val timeLogSummaryList: List<TimeLogSummary> = searchResults.toTimeLogSummaryList().sorted()
+
+        //timeLineのlazyList
         LazyColumn(modifier = Modifier.weight(2f)) {
             items(timeLine) { item ->
-                TimeLogLine(timeLog = item, timeUnit = timeUnit, heightAlpha = 2f/6f,
-                    isPackageNameSelected = appNameSelected == item.timeContent )
+                TimeLogLine(timeLog = item, timeUnit = timeUnit, heightAlpha = heightAlpha,
+                    isPackageNameSelected = appNameSelected == item.timeContent,
+                    onClick = {
+                        appNameSelected = item.timeContent
+                        coroutineScope.launch {
+                            timeLogSummaryListState.scrollToItem(
+                                timeLogSummaryList.indexOfFirst { it.timeContent == item.timeContent }
+                                )
+                        }
+                    })
             }
         }
 
-        // timeLogSummaryのリスト
-        val timeLogSummaryList: List<TimeLogSummary> = searchResults.toTimeLogSummaryList().sorted()
+        // timeLogSummaryのlazyList
         LazyColumn(modifier = Modifier
             .weight(1f)
-            .background(Color(0x446699FF))
+            .background(Color(0x446699FF)),
+            state = timeLogSummaryListState
         ) {
             items(timeLogSummaryList) { item ->
                 TimeLogSummaryRow(
                     timeLogSummary = item,
                     onClick = { appNameSelected = if (appNameSelected != item.timeContent) item.timeContent else "" },
-                    non_transparency = if(appNameSelected==item.timeContent) 255 else 128
-                )
-            }
-        }
-    }
-
-}
-
-@Composable
-fun DayPage(modifier: Modifier,
-            currentDate: LocalDate,
-            firstDate: LocalDate,
-            searchResults: List<TimeLog>,
-            onDateSpanSelected: (LocalDate, LocalDate) -> Unit
-) {
-    val dateList = mutableListOf<LocalDate>()
-    var tmpDate = currentDate
-    while (tmpDate>=firstDate) {
-        dateList.add(tmpDate)
-        tmpDate = tmpDate.minusDays(1)
-    }
-    //PageContent
-    var selectedDate by remember { mutableStateOf(dateList[0]) }
-    val timeUnit = TimeUnit.MINUTES.toMillis(1) //分を単位とする
-    onDateSpanSelected(selectedDate, selectedDate)
-    Column(modifier = modifier) {
-        // 日付選択用のドロップダウンボックス
-        DateSelectionDropDown(dateList = dateList, selectedDate = selectedDate) { date ->
-            selectedDate = date
-            onDateSpanSelected(selectedDate, selectedDate)
-        }
-
-        var appNameSelected: String by remember{ mutableStateOf("") }
-
-        //時間軸に沿ったログの一覧のlazy column
-        val timeLine: List<TimeLog> = searchResults
-                        .toCloseConcatenated(timeUnit)
-                        .toTimeGapFilled(
-                            LocalDateTime.of(selectedDate, LocalTime.MIN),
-                            LocalDateTime.of(selectedDate, LocalTime.MAX)
-                        )
-                        .toTimeIndexInserted(
-                            (0..23).toList()
-                                .map { LocalDateTime.of(selectedDate, LocalTime.of(it, 0)) })
-        LazyColumn(modifier = Modifier.weight(2f)) {
-            items(timeLine) { item ->
-                TimeLogLine(timeLog = item, timeUnit = timeUnit, heightAlpha = 2f,
-                isPackageNameSelected = appNameSelected == item.timeContent )
-            }
-        }
-
-        // timeLogSummaryのリスト
-        val timeLogSummaryList: List<TimeLogSummary> = searchResults.toTimeLogSummaryList().sorted()
-        LazyColumn(modifier = Modifier
-            .weight(1f)
-            .background(Color(0x446699FF))
-        ) {
-            items(timeLogSummaryList) { item ->
-                TimeLogSummaryRow(
-                    timeLogSummary = item,
-                    onClick = { appNameSelected = if (appNameSelected != item.timeContent) item.timeContent else "" },
-                    non_transparency = if(appNameSelected==item.timeContent) 255 else 128
+                    non_transparency = if(appNameSelected==item.timeContent) 255 else 128,
                 )
             }
         }
@@ -292,7 +290,7 @@ fun DayPage(modifier: Modifier,
 }
 
 // Roomに保存された最古のTimeLogの日付（開始）を出力する。もしTimeLogが1つも存在しなければ現在の日付を出力
-private fun getFirstDate(viewModel: TimeLogViewModel): LocalDate {
+private fun getFirstDate(viewModel: MainViewModel): LocalDate {
     return viewModel.getFistLog().let {
         if (it!=null) {
             it.fromDateTime.toLocalDate()
@@ -304,7 +302,12 @@ private fun getFirstDate(viewModel: TimeLogViewModel): LocalDate {
 
 //TimeLogを表示するボックス。
 @Composable
-fun TimeLogLine(timeLog:TimeLog, timeUnit:Long, heightAlpha: Float, modifier: Modifier = Modifier, isPackageNameSelected: Boolean){
+fun TimeLogLine(timeLog: TimeLog,
+                timeUnit:Long, heightAlpha: Float,
+                modifier: Modifier = Modifier,
+                isPackageNameSelected: Boolean,
+                onClick: () -> Unit
+){
     val height = ((timeLog.untilDateTime.toMilliSec() - timeLog.fromDateTime.toMilliSec()) / timeUnit * heightAlpha).toInt().dp
     val context = LocalContext.current
     when (timeLog.contentType) {
@@ -327,7 +330,8 @@ fun TimeLogLine(timeLog:TimeLog, timeUnit:Long, heightAlpha: Float, modifier: Mo
                     if (isPackageNameSelected) 255 else 126
                 ), shape = RoundedCornerShape(4.dp)
             )
-            .height(height)){}
+            .height(height)
+            .selectable(false, onClick = onClick)){}
     }
 }
 
@@ -382,18 +386,22 @@ fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<LocalDateTime>): Li
         var tmpTimeLog = timeLog
         indexedDateTimes.forEach { indexedDateTime ->
             if (tmpTimeLog.fromDateTime <= indexedDateTime && indexedDateTime <= tmpTimeLog.untilDateTime) {
-                newTimeLogList.add(TimeLog(
+                newTimeLogList.add(
+                    TimeLog(
                     contentType = tmpTimeLog.contentType,
                     fromDateTime = tmpTimeLog.fromDateTime,
                     untilDateTime = indexedDateTime,
                     timeContent = tmpTimeLog.timeContent
-                ))
-                newTimeLogList.add(TimeLog(
+                )
+                )
+                newTimeLogList.add(
+                    TimeLog(
                     contentType = "__IndexedDateTime__",
                     fromDateTime = indexedDateTime,
                     untilDateTime = indexedDateTime,
                     timeContent = ""
-                ))
+                )
+                )
                 tmpTimeLog = TimeLog(
                     contentType = tmpTimeLog.contentType,
                     fromDateTime = indexedDateTime,
@@ -497,7 +505,7 @@ fun TimeLogSummaryRow(timeLogSummary: TimeLogSummary,
             .fillMaxWidth()
             .padding(5.dp)
             .background(color = appName.toColor(non_transparency))
-            .selectable(false, onClick=onClick)
+            .selectable(false, onClick = onClick)
     ) {
         if (timeLogSummary.contentType == stringResource(id = R.string.app)) {
             AppIcon(appName = timeLogSummary.timeContent, modifier = Modifier.size(40.dp, 40.dp), context = context)

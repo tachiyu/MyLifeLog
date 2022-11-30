@@ -8,19 +8,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.timeitforward.InputScreenSetup
 import com.example.timeitforward.R
-import com.example.timeitforward.TimeLogViewModel
+import com.example.timeitforward.MainViewModel
 
 enum class DESTINATIONS(val str: String, val shown: Int) {
+    SUMMARY("summary", R.string.SUMMARY),
     INPUT("input", R.string.INPUT),
-    SUMMARY("summary", R.string.SUMMARY)
+    SETTING("setting", R.string.SETTING)
 }
 
 @Composable
 fun MyNavHost(
-    viewModel: TimeLogViewModel,
+    viewModel: MainViewModel,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    startDestination: String = DESTINATIONS.INPUT.str
+    startDestination: String = DESTINATIONS.SUMMARY.str
 ) {
     NavHost(
         modifier = modifier,
@@ -34,6 +35,11 @@ fun MyNavHost(
         }
         composable(DESTINATIONS.SUMMARY.str) {
             SummaryScreenSetup(
+                viewModel = viewModel
+            )
+        }
+        composable(DESTINATIONS.SETTING.str) {
+            SettingScreenSetup(
                 viewModel = viewModel
             )
         }

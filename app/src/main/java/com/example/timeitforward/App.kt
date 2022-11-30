@@ -16,7 +16,7 @@ import com.example.timeitforward.ui.DESTINATIONS
 import com.example.timeitforward.ui.MyNavHost
 
 @Composable
-fun App(viewModel: TimeLogViewModel) {
+fun App(viewModel: MainViewModel) {
     val navController = rememberNavController()
     Scaffold(bottomBar = {NavBottomBar(navController = navController)})
     {

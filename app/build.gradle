@@ -78,4 +78,5 @@ dependencies {
     implementation 'com.vmadalin:easypermissions-ktx:1.0.0'
     // Sleep API
     implementation 'com.google.android.gms:play-services-location:20.0.0'
+    implementation "org.jetbrains.kotlin:kotlin-script-runtime:1.6.21"
 }

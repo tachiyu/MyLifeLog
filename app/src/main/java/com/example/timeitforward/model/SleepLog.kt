@@ -1,6 +1,6 @@
 package com.example.timeitforward
 
-fun loadSleepLogs(viewModel: TimeLogViewModel) {
+fun loadSleepLogs(viewModel: MainViewModel) {
 //    val task = ActivityRecognition.getClient(activity)
 //        .requestSleepSegmentUpdates(
 //            pendingIntent,

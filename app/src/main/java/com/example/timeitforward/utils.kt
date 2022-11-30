@@ -49,7 +49,7 @@ fun Long.toHMS(): String {
 }
 
 // searchResultsをcontentTypeで絞ってupdateする。
-fun updateSearchResultsByContentType(contentType: String, viewModel: TimeLogViewModel, tabData: List<String>) {
+fun updateSearchResultsByContentType(contentType: String, viewModel: MainViewModel, tabData: List<String>) {
     if (contentType == "その他") {
         viewModel.findTimeLogByNotContentTypes(
             tabData.filter { tabText -> tabText != "その他" }
@@ -64,7 +64,7 @@ fun updateSearchResultsOfContentTypeBetweenDates(
     fromDate: LocalDate,
     untilDate: LocalDate,
     contentType: String,
-    viewModel: TimeLogViewModel
+    viewModel: MainViewModel
 ) {
     viewModel.findTimeLogOfContentTypeBetweenDateTimes(
         fromDate.atStartOfDay(),
@@ -74,7 +74,7 @@ fun updateSearchResultsOfContentTypeBetweenDates(
 }
 
 // For test (現在使用されてない). 各項目に10万件ログを入れてどうなるか
-private fun insertBigRecords(viewModel: TimeLogViewModel) {
+private fun insertBigRecords(viewModel: MainViewModel) {
     val tabData = listOf("場所","睡眠", "アプリ")
     tabData.forEach { tabText ->
         repeat(100000) {

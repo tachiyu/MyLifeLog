@@ -8,7 +8,7 @@ import com.example.timeitforward.*
 import java.time.LocalDateTime
 
 // アプリ起動時or更新ボタン押下時にアプリのログをとってきてinsertTimeLogでデータベースに保存する。
-class AppLog(private val activity: MainActivity, private val viewModel: TimeLogViewModel) {
+class AppLog(private val activity: MainActivity, private val viewModel: MainViewModel) {
 
     private val tag = AppLog::class.java.simpleName
     private val app = activity.getString(R.string.app)
