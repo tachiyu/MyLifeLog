@@ -36,11 +36,20 @@
         </activity>
 
         <receiver
-            android:name=".ActivityUpdatesBroadcastReceiver"
+            android:name=".model.receiver.ActivityUpdatesBroadcastReceiver"
             android:permission="com.google.android.gms.permission.ACTIVITY_RECOGNITION"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.example.timeitforward.ActivityUpdatesBroadcastReceiver.ACTION_PROCESS_UPDATE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".model.receiver.SleepBroadcastReceiver"
+            android:permission="com.google.android.gms.permission.ACTIVITY_RECOGNITION"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.timeitforward.SleepBroadcastReceiver.ACTION_PROCESS_UPDATE" />
             </intent-filter>
         </receiver>
 

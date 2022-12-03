@@ -1,9 +1,8 @@
 package com.example.timeitforward.model.db.transition
 
 import androidx.lifecycle.LiveData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import java.time.LocalDateTime
 
 class TransitionRepository(private val transitionDao: TransitionDao) {
 
@@ -13,6 +12,14 @@ class TransitionRepository(private val transitionDao: TransitionDao) {
     fun insertTransition(transition: Transition) {
         coroutineScope.launch(Dispatchers.IO) {
             transitionDao.insertTransition(transition)
+        }
+    }
+
+    fun getTransitionBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Transition> {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async transitionDao.getTransitionBetween(fromDateTime, untilDateTime)
+            }.await()
         }
     }
 }

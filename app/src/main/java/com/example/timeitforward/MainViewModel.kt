@@ -6,6 +6,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.timeitforward.model.db.MainRoomDatabase
+import com.example.timeitforward.model.db.sleep.Sleep
+import com.example.timeitforward.model.db.sleep.SleepRepository
 import com.example.timeitforward.model.db.timelog.TimeLog
 import com.example.timeitforward.model.db.timelog.TimeLogRepository
 import com.example.timeitforward.model.db.transition.Transition
@@ -22,16 +24,22 @@ class MainViewModel(application: Application) : ViewModel() {
     val allTransitions: LiveData<List<Transition>>
     private val transitionRepository: TransitionRepository
 
+    val allSleeps: LiveData<List<Sleep>>
+    private  val sleepRepository: SleepRepository
+
     init {
         val db = MainRoomDatabase.getInstance(application)
         val timeLogDao = db.TimeLogDao()
         val transitionDao = db.TransitionDao()
+        val sleepDao = db.SleepDao()
         timeLogRepository = TimeLogRepository(timeLogDao)
         transitionRepository = TransitionRepository(transitionDao)
+        sleepRepository = SleepRepository(sleepDao)
 
         allTimeLogs = timeLogRepository.allTimeLogs
         searchResults = timeLogRepository.searchResults
         allTransitions = transitionRepository.allTransition
+        allSleeps = sleepRepository.allSleeps
     }
 
     fun insertTimeLog(timeLog: TimeLog) {
@@ -78,6 +86,14 @@ class MainViewModel(application: Application) : ViewModel() {
 
     fun insertTransition(transition: Transition) {
         transitionRepository.insertTransition(transition)
+    }
+
+    fun insertSleep(sleep: Sleep) {
+        sleepRepository.insertSleep(sleep)
+    }
+
+    fun getTransitionBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Transition> {
+        return transitionRepository.getTransitionBetween(fromDateTime, untilDateTime)
     }
 }
 
@@ -126,4 +142,8 @@ fun insertTimeLog(timeLog: TimeLog, viewModel: MainViewModel) {
 
 fun insertTransition(transition: Transition, viewModel: MainViewModel) {
     viewModel.insertTransition(transition)
+}
+
+fun insertSleep(sleep: Sleep, viewModel: MainViewModel) {
+    viewModel.insertSleep(sleep)
 }

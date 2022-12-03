@@ -11,6 +11,8 @@ class Transition(
        @ColumnInfo(name = "activity_type") var activityType: Int,
        @ColumnInfo(name = "transition_type") var transitionType: Int,
        @ColumnInfo(name = "datetime") var dateTime: LocalDateTime,
+       @ColumnInfo(name = "latitude") var latitude: Double?,
+       @ColumnInfo(name = "longitude") var longitude: Double?,
        @ColumnInfo(name = "elapsed_time_nano") var elapsedTimeNano: Long
 ) {
        @PrimaryKey(autoGenerate = true)

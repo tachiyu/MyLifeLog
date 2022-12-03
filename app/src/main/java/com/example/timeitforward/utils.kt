@@ -7,7 +7,11 @@ import java.time.*
 import java.util.zip.CRC32
 
 fun getAppName(packageName: String, context: Context): String {
-    return packageManager(context).getApplicationLabel(packageName).toString()
+    return try {
+        packageManager(context).getApplicationLabel(packageName).toString()
+    } catch(e:Exception){
+        "$packageName"
+    }
 }
 
 //StringからCRC32によってハッシュ値をつくり、その値からColorを生成する。non_transparency: 0 ~ 255

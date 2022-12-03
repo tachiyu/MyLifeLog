@@ -8,22 +8,27 @@ import com.example.timeitforward.*
 import java.time.LocalDateTime
 
 // アプリ起動時or更新ボタン押下時にアプリのログをとってきてinsertTimeLogでデータベースに保存する。
-class AppLog(private val activity: MainActivity, private val viewModel: MainViewModel) {
+class AppLogManager(private val activity: MainActivity, private val viewModel: MainViewModel) {
 
-    private val tag = AppLog::class.java.simpleName
-    private val app = activity.getString(R.string.app)
+    private val tag = AppLogManager::class.java.simpleName
+    private val contentType = activity.getString(R.string.app)
 
-    // getLastUpdatedTimeから最新までのAppログを取得しRoomに保存する
+    // 最後に保存されたAppログから最新までのAppログを取得しRoomに保存する
     fun loadAppLogs() {
         Log.d(tag, "loadAppLogs called")
-        val usageEvents: UsageEvents = getUsageEventsObject(startTime = getLastUpdatedTime())
-        var isForeground = false
+        val usageStatsManager: UsageStatsManager =
+            activity.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val usageEvents: UsageEvents = usageStatsManager.queryEvents(
+            viewModel.getLastLogInContent(contentType)?.untilDateTime?.toMilliSec() ?:0, //untilDateTime of the latest app log or 0
+            System.currentTimeMillis()
+        )
 
-        val contentType: String = app
+        val contentType: String = contentType
         var timeContent = ""
         var fromDateTime: LocalDateTime = LocalDateTime.MIN //初期値は使わないがコンパイルエラー回避
         var untilDateTime: LocalDateTime
 
+        var isForeground = false
         while (usageEvents.hasNextEvent()) {
             val event: UsageEvents.Event = UsageEvents.Event()
             usageEvents.getNextEvent(event)
@@ -59,25 +64,5 @@ class AppLog(private val activity: MainActivity, private val viewModel: MainView
                 }
             }
         }
-    }
-
-    // Roomに保存されているAppログの中で最新のログのバックグラウンド移動時刻を取得
-    private fun getLastUpdatedTime(): LocalDateTime {
-        val lastAppLog = viewModel.getLastLogInContent(app)
-        Log.d(tag, "app: $app")
-        val ret = lastAppLog?.untilDateTime ?: 0.toLong().toLocalDateTime()
-        Log.d(tag, "getLastUpdatedTime: $ret")
-        return ret
-    }
-
-    // UsageEventsオブジェクトを取得する
-    private fun getUsageEventsObject(startTime: LocalDateTime): UsageEvents {
-        val usageStatsManager: UsageStatsManager =
-            activity.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-
-        return usageStatsManager.queryEvents(
-            startTime.toMilliSec(),
-            System.currentTimeMillis()
-        )
     }
 }

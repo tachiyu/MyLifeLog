@@ -2,6 +2,8 @@ package com.example.timeitforward.model.db
 
 import android.content.Context
 import androidx.room.*
+import com.example.timeitforward.model.db.sleep.Sleep
+import com.example.timeitforward.model.db.sleep.SleepDao
 import com.example.timeitforward.model.db.timelog.TimeLog
 import com.example.timeitforward.model.db.timelog.TimeLogDao
 import com.example.timeitforward.model.db.transition.Transition
@@ -10,11 +12,12 @@ import java.time.LocalDateTime
 
 
 @TypeConverters(DateTimeConverter::class)
-@Database(entities = [(TimeLog::class), (Transition::class)], version = 1, exportSchema = false)
+@Database(entities = [(TimeLog::class), (Transition::class), (Sleep::class)], version = 1, exportSchema = false)
 abstract class MainRoomDatabase: RoomDatabase() {
 
     abstract fun TimeLogDao(): TimeLogDao
     abstract fun TransitionDao(): TransitionDao
+    abstract fun SleepDao(): SleepDao
 
     companion object {
 

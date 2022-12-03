@@ -235,6 +235,7 @@ fun SummaryContent(modifier: Modifier,
     val endDate = calcEndDate(selectedDate)
     val timeUnit = TimeUnit.MINUTES.toMillis(1) //分を単位とする
     onDateSpanSelected(selectedDate, endDate)
+
     Column(modifier = modifier) {
         // 日付選択用のドロップダウンボックス
         DateSelectionDropDown(dateList = dateList, selectedDate = selectedDate) { date ->
