@@ -14,13 +14,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.example.timeitforward.MainViewModel
+import com.example.timeitforward.*
+import com.example.timeitforward.model.LocationLogManager
 import com.example.timeitforward.model.apimanager.ActivityTransitionManager
 import com.example.timeitforward.model.apimanager.SleepManager
 import com.example.timeitforward.model.db.sleep.Sleep
 import com.example.timeitforward.model.db.transition.Transition
+import com.example.timeitforward.model.doSomethingWithLocation
 import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.DetectedActivity
+import com.google.android.gms.location.LocationServices
+import java.time.LocalDateTime
 
 private const val TAG = "SettingScreen"
 
@@ -28,27 +32,39 @@ private const val TAG = "SettingScreen"
 fun SettingScreenSetup(viewModel: MainViewModel) {
     val allTransitions by viewModel.allTransitions.observeAsState(listOf())
     val allSleeps by viewModel.allSleeps.observeAsState(listOf())
-    SettingScreen(allTransitions, allSleeps)
+    val locationLogManager = LocationLogManager(LocalContext.current as MainActivity, viewModel)
+    SettingScreen(allTransitions, allSleeps, locationLogManager, viewModel)
 }
 
 @Composable
-fun SettingScreen(allTransitions: List<Transition>, allSleep: List<Sleep>) {
+fun SettingScreen(allTransitions: List<Transition>, 
+                  allSleep: List<Sleep>, 
+                  locationLogManager: LocationLogManager,
+                  viewModel: MainViewModel
+) {
     Column {
-        ARSubscribeSwitch()
+        ARSubscribeSwitch(locationLogManager)
         SleepSubscribeSwitch()
         SendARBroadcastButton(DetectedActivity.STILL, ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+        clearLocationButton(viewModel = viewModel)
+        clearTransitionButton(viewModel = viewModel)
+        clearAppButton(viewModel = viewModel)
+        clearSleepLogButton(viewModel = viewModel)
+        Row {setLastSleepUpdateButton(viewModel = viewModel)
+            setLastLocationUpdateButton(viewModel = viewModel)
+        }
+
 
         Row {
             val scrollStateLeft = rememberScrollState()
             LazyColumn(modifier = Modifier
                 .weight(1f)
                 .horizontalScroll(scrollStateLeft), content = {
-                items(allTransitions){ item ->
+                items(allTransitions.reversed()){ item ->
                     Column(){
                         Text(text = "${item.activityType}  ${item.transitionType}")
                         Text(text = "${item.dateTime}")
                         Text(text = "${item.latitude} ${item.longitude}")
-                        Text(text = "${item.elapsedTimeNano}")
                     }
                 }
             })
@@ -56,7 +72,7 @@ fun SettingScreen(allTransitions: List<Transition>, allSleep: List<Sleep>) {
             LazyColumn(modifier = Modifier
                 .weight(1f)
                 .horizontalScroll(scrollStateRight), content = {
-                items(allSleep){ item ->
+                items(allSleep.reversed()){ item ->
                     Column(){
                         Text(text = "${item.confidence}")
                         Text(text = "${item.dateTime}")
@@ -73,6 +89,7 @@ fun SettingScreen(allTransitions: List<Transition>, allSleep: List<Sleep>) {
 fun SleepSubscribeSwitch(){
     // A switch to setting whether subscribe to Sleep API
     val context = LocalContext.current
+    val contentType = "sleep"
     val sharedPref = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
     val key = "IsSleepDetectionSubscribed"
@@ -89,6 +106,8 @@ fun SleepSubscribeSwitch(){
             if(it) {
                 sleepManager.startSleepUpdate()
                 sharedPrefEditor.putBoolean(key, true).apply()
+                setLastUpdateTime(context, contentType, LocalDateTime.now())
+                setLastSleepState(context, contentType, "awake")
                 checkedState = true
             } else {
                 sleepManager.stopSleepUpdate()
@@ -100,28 +119,45 @@ fun SleepSubscribeSwitch(){
 }
 
 @Composable
-fun ARSubscribeSwitch(){
+fun ARSubscribeSwitch(locationLogManager: LocationLogManager){
     // A switch to setting whether subscribe to Activity Recognition API
     val context = LocalContext.current
+    val contentType = "location"
     val sharedPref = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
     val key = "IsActivityRecognitionSubscribed"
     var checkedState by remember{ mutableStateOf(false) }
+    //Settingから読み込んだkeyの状態をSwitchに反映する。keyがなければfalseにセットしておく。
     if (!sharedPref.contains(key)) {
         sharedPrefEditor.putBoolean(key, false).apply()
     } else {
         checkedState = sharedPref.getBoolean(key, false)
     }
     val activityTransitionManager = ActivityTransitionManager.getInstance(context)
+    var locationClient = LocationServices.getFusedLocationProviderClient(context)
     Row() {
         Text("アクティビティの変化を検知する")
         Switch(checked = checkedState, onCheckedChange = {
-            if(it) {
+            if(it) { /*スイッチON➔・ActivityRecognitionTransitionAPIにサブスクライブ
+                                　・Settings：IsActivityRecognitionSubscribedをtrueに
+                                 ・lastLocation・lastUpdateTimeを更新*/
                 activityTransitionManager.startActivityUpdate()
+                setLastUpdateTime(context, contentType, LocalDateTime.now())
+                doSomethingWithLocation(TAG, context, locationClient,
+                    onSuccess = {location -> setLastLocation(
+                        context, contentType, "3,${location.latitude},${location.longitude}"
+                    )},
+                    onFailure = {setLastLocation(
+                        context, contentType, "3,null,null"
+                    )}
+                )
                 sharedPrefEditor.putBoolean(key, true).apply()
                 checkedState = true
-            } else {
+            } else { /*スイッチOFF➔・ActivityRecognitionTransitionAPIのサブスクライブを解除
+                                　・Settings：IsActivityRecognitionSubscribedをfalseに
+                                 ・updateLocationLogを実行*/
                 activityTransitionManager.stopActivityUpdate()
+                locationLogManager.updateLocationLogs()
                 sharedPrefEditor.putBoolean(key, false).apply()
                 checkedState = false
             }
@@ -167,5 +203,69 @@ fun SendARBroadcastButton(activityType:Int, transitionType:Int){
             onClick = {activityTransitionManager.sendBroadcastForTest(selected1, selected2)}) {
             Text(text = "アクティビティを送る")
         }
+    }
+}
+
+@Composable
+fun clearTransitionButton(viewModel: MainViewModel){
+    Button(onClick = {viewModel.clearTransitionTable()}
+    ){
+        Text(text = "Transitionを消去")
+    }
+}
+
+@Composable
+fun clearSleepButton(viewModel: MainViewModel){
+    Button(onClick = {viewModel.clearSleepTable()}
+    ){
+        Text(text = "Sleepを消去")
+    }
+}
+
+@Composable
+fun clearLocationButton(viewModel: MainViewModel){
+    Button(onClick = {viewModel.clearContent("location")}
+    ){
+        Text(text = "LocationLogを消去")
+    }
+}
+
+@Composable
+fun clearAppButton(viewModel: MainViewModel){
+    Button(onClick = {viewModel.clearContent("app")}
+    ){
+        Text(text = "AppLogを消去")
+    }
+}
+
+@Composable
+fun clearSleepLogButton(viewModel: MainViewModel){
+    Button(onClick = {viewModel.clearContent("sleep")}
+    ){
+        Text(text = "SleepLogを消去")
+    }
+}
+
+@Composable
+fun setLastLocationUpdateButton(viewModel: MainViewModel){
+    val context = LocalContext.current
+    Button(onClick = {
+        setLastUpdateTime(context, "location", LocalDateTime.of(2022, 12, 15, 23, 30,0))
+        setLastLocation(context, "location", "3,35.05408360791938,135.74253020215457")
+    }
+    ){
+        Text(text = "reset LastLocation")
+    }
+}
+
+@Composable
+fun setLastSleepUpdateButton(viewModel: MainViewModel){
+    val context = LocalContext.current
+    Button(onClick = {
+        setLastUpdateTime(context, "sleep", LocalDateTime.of(2022, 12, 14, 21, 0,0))
+        setLastSleepState(context, "sleep", "awake")
+    }
+    ){
+        Text(text = "reset LastSleep")
     }
 }

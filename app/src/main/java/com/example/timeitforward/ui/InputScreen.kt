@@ -1,20 +1,26 @@
-package com.example.timeitforward
+package com.example.timeitforward.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.timeitforward.*
+import com.example.timeitforward.R
+import com.example.timeitforward.model.AppLogManager
+import com.example.timeitforward.model.LocationLogManager
 import com.example.timeitforward.model.db.timelog.TimeLog
-import com.example.timeitforward.ui.TabBar
-import com.example.timeitforward.ui.TimeLogsLazyColumn
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.MaterialDialogButtons
 import com.vanpra.composematerialdialogs.MaterialDialogScope
@@ -25,68 +31,62 @@ import com.vanpra.composematerialdialogs.datetime.time.TimePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
 import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 
 
 @Composable
 fun InputScreenSetup(viewModel: MainViewModel) {
-    val searchResults by viewModel.searchResults.observeAsState(listOf())
-
+    val allTimeLogs by viewModel.allTimeLogs.observeAsState(listOf())
+    val activity = LocalContext.current as MainActivity
+    val appLogManager = AppLogManager(activity, viewModel)
+    val locationLogManager = LocationLogManager(activity, viewModel)
+    val sleepLogManager = SleepLogManager(activity, viewModel)
     InputScreen(
-        searchResults = searchResults,
-        viewModel = viewModel
+        allTimeLogs = allTimeLogs,
+        insertTimeLog = {timeLog -> insertTimeLog(timeLog, viewModel)},
+        appLogManager = appLogManager,
+        locationLogManager = locationLogManager,
+        sleepLogManager = sleepLogManager
     )
 }
 
 
 @Composable
 fun InputScreen(
-    searchResults: List<TimeLog>,
-    viewModel: MainViewModel
+    allTimeLogs: List<TimeLog>,
+    insertTimeLog: (TimeLog) -> Unit,
+    appLogManager: AppLogManager,
+    locationLogManager: LocationLogManager,
+    sleepLogManager: SleepLogManager
 ) {
     val dialogColor = remember { Color(0xFF3700B3) }
 
-    val contentTabs = listOf(
-        stringResource(id = R.string.app),
-        stringResource(id = R.string.location),
-        stringResource(id = R.string.sleep),
-        stringResource(id = R.string.others)
-    )
-    var contentTabIndex by remember { mutableStateOf(0) }
+    val contentTypes = listOf<String>("app","location","sleep","others")
+    var contentTabIndex by remember { mutableStateOf(3) }
 
     // 入力フィールドの値
-    var contentType: String by remember { mutableStateOf("") }
+    var contentType = "others"
     var timeContent: String by remember { mutableStateOf("") }
     var fromDate: LocalDate? by remember { mutableStateOf(null) }
     var untilDate: LocalDate? by remember { mutableStateOf(null) }
     var fromTime: LocalTime? by remember { mutableStateOf(null) }
     var untilTime: LocalTime? by remember { mutableStateOf(null) }
 
-    updateSearchResultsByContentType(
-        contentType = contentTabs[contentTabIndex],
-        viewModel = viewModel,
-        tabData = contentTabs
-    )
+    val timeLogs = allTimeLogs.betweenOf(contentTypes[contentTabIndex], LocalDate.MIN, LocalDate.MAX)
 
     Column(
         modifier = Modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Button(onClick = {
-            updateSearchResultsByContentType(
-                contentType = contentTabs[contentTabIndex],
-                viewModel = viewModel,
-                tabData = contentTabs
-            )
-        }) {
-            Text("すべて更新")
-        }
-        TimeContentField(
-            value = contentType,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally),
-            label = "種類を入力",
-            onValueChange = { contentType = it })
+        UpdateButton(
+            modifier = Modifier,
+            appLogManager = appLogManager,
+            locationLogManager = locationLogManager,
+            sleepLogManager = sleepLogManager
+        )
+        Text(modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = stringResource(id = R.string.input_others_logs))
         TimeContentField(
             value = timeContent,
             modifier = Modifier
@@ -136,7 +136,6 @@ fun InputScreen(
             )
         }
         TimeLogDraft(
-            contentType = contentType,
             timeContent = timeContent,
             fromDate = fromDate,
             fromTime = fromTime,
@@ -148,19 +147,13 @@ fun InputScreen(
                 .padding(8.dp)
                 .background(MaterialTheme.colors.primaryVariant),
             onClick = {
-                val fromDateTime = getLocalDateTime(fromDate, fromTime)
-                val untilDateTime = getLocalDateTime(untilDate, untilTime)
                 insertTimeLog(
-                    contentType = contentType,
-                    timeContent = timeContent,
-                    fromDateTime = fromDateTime,
-                    untilDateTime = untilDateTime,
-                    viewModel = viewModel
-                )
-                updateSearchResultsByContentType(
-                    contentType = contentTabs[contentTabIndex],
-                    viewModel = viewModel,
-                    tabData = contentTabs
+                    TimeLog(
+                        contentType = contentType,
+                        timeContent = timeContent,
+                        fromDateTime = LocalDateTime.of(fromDate, fromTime),
+                        untilDateTime = LocalDateTime.of(untilDate, untilTime),
+                    )
                 )
             }
         ) {
@@ -172,15 +165,13 @@ fun InputScreen(
                 color = MaterialTheme.colors.onPrimary
             )
         }
-        TimeLogsLazyColumn(timeLogs = searchResults.reversed(), modifier = Modifier.weight(2f))
-        TabBar(
+        TimeLogsLazyColumn(timeLogs = timeLogs.reversed(), modifier = Modifier.weight(2f))
+        //コンテンツタイプ（アプリ、場所など）を決めるタブ
+        AppTabBar(
             modifier = Modifier,
-            tabIndex = contentTabIndex,
-            tabData = contentTabs,
-            onTabSwitch = {index, text ->
-                contentTabIndex = index
-                updateSearchResultsByContentType(text, viewModel, contentTabs)
-            })
+            contentTabIndex = contentTabIndex,
+            onTabSwitch = {index, _ -> contentTabIndex = index }
+        )
     }
 }
 
@@ -189,6 +180,7 @@ fun TimeContentField(
     value: String,
     label: String,
     modifier: Modifier,
+    readOnly: Boolean = false,
     onValueChange: (String) -> Unit
 ) {
     TextField(
@@ -196,7 +188,8 @@ fun TimeContentField(
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
-        modifier = modifier
+        modifier = modifier,
+        readOnly = readOnly
     )
 }
 
@@ -274,13 +267,13 @@ fun DialogAndShowButton(
 
 @Composable
 fun TimeLogDraft(
-    contentType: String, timeContent: String,
+    timeContent: String,
     fromDate: LocalDate?, fromTime: LocalTime?,
     untilDate: LocalDate?, untilTime: LocalTime?
 ) {
     Column {
         Text(
-            text = "$contentType $timeContent",
+            text = "$timeContent",
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )

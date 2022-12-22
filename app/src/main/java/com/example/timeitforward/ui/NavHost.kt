@@ -6,7 +6,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.timeitforward.InputScreenSetup
 import com.example.timeitforward.R
 import com.example.timeitforward.MainViewModel
 

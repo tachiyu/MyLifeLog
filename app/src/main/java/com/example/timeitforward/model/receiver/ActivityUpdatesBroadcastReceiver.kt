@@ -1,21 +1,17 @@
 package com.example.timeitforward.model.receiver
 
-import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.util.Log
-import androidx.core.app.ActivityCompat
 import com.example.timeitforward.model.db.MainRoomDatabase
 import com.example.timeitforward.model.db.transition.Transition
 import com.example.timeitforward.model.db.transition.TransitionRepository
+import com.example.timeitforward.model.doSomethingWithLocation
+import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.ActivityTransitionResult
+import com.google.android.gms.location.DetectedActivity
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationToken
-import com.google.android.gms.tasks.CancellationTokenSource
-import com.google.android.gms.tasks.OnTokenCanceledListener
 import java.time.LocalDateTime
 
 private const val TAG = "ActivityUpdatesBroadcastReceiver"
@@ -23,61 +19,48 @@ private const val TAG = "ActivityUpdatesBroadcastReceiver"
 class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "onReceive() context:$context, intent:$intent")
         if (ActivityTransitionResult.hasResult(intent)) {
-            Log.d(TAG, "received result")
             val result = ActivityTransitionResult.extractResult(intent)!!
+            Log.d(TAG, "receive ${result.transitionEvents.size} transition events")
             val dB: MainRoomDatabase = MainRoomDatabase.getInstance(context)
             val transitionRepository = TransitionRepository(dB.TransitionDao())
             var locationClient = LocationServices.getFusedLocationProviderClient(context)
 
             for (event in result.transitionEvents) {
-                //少なくとも1つパーミッションがあれば、Locationを取得。
-                if ((ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED ||
-                        ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED )
+                Log.d(TAG, "get event: ActivityType=${event.activityType}, TransitionType=${event.transitionType}")
+                val dateTimeNow = LocalDateTime.now()
+                //ActivityがSTILL、TransitionがEnterならLocationを取得しつつinsertTransition。
+                //Activity・Transitionがそれ以外か、位置のパーミッションがない場合は、Locationは取得しないでinsertTransition。
+                if (
+                    event.activityType == DetectedActivity.STILL &&
+                    event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER
                 ) {
-                    Log.d(TAG, "try to get location")
-                    locationClient.getCurrentLocation(
-                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                        object : CancellationToken() {
-                            override fun onCanceledRequested(p0: OnTokenCanceledListener) = CancellationTokenSource().token
-                            override fun isCancellationRequested() = false
-                        }
-                    ).addOnSuccessListener { location ->
-                        Log.d(TAG, "get location")
-                        transitionRepository.insertTransition(
-                            Transition(
-                                activityType = event.activityType,
-                                transitionType = event.transitionType,
-                                dateTime = LocalDateTime.now(),
-                                elapsedTimeNano = event.elapsedRealTimeNanos,
-                                latitude = location.latitude,
-                                longitude = location.longitude
-                            )
-                        )
-                    }.addOnFailureListener {
-                        Log.d(TAG, "can not get location")
-                        transitionRepository.insertTransition(
-                            Transition(
-                                activityType = event.activityType,
-                                transitionType = event.transitionType,
-                                dateTime = LocalDateTime.now(),
-                                elapsedTimeNano = event.elapsedRealTimeNanos,
-                                latitude = null,
-                                longitude = null
-                            )
-                        )
-                    }
+                    doSomethingWithLocation(
+                        TAG, context, locationClient,
+                        onSuccess = { location ->
+                            Log.d(TAG, "latitude:${location.latitude}, longitude:${location.longitude}")
+                            transitionRepository.insertTransition(
+                                Transition(
+                                    activityType = event.activityType,
+                                    transitionType = event.transitionType,
+                                    dateTime = dateTimeNow,
+                                    latitude = location.latitude,
+                                    longitude = location.longitude)) },
+                        onFailure = {
+                            transitionRepository.insertTransition(
+                                Transition(
+                                    activityType = event.activityType,
+                                    transitionType = event.transitionType,
+                                    dateTime = dateTimeNow,
+                                    latitude = null,
+                                    longitude = null)) })
                 } else {
-                    Log.d(TAG, "location permission denied")
+                    Log.d(TAG, "pushed without location info")
                     transitionRepository.insertTransition(
                         Transition(
                             activityType = event.activityType,
                             transitionType = event.transitionType,
-                            dateTime = LocalDateTime.now(),
-                            elapsedTimeNano = event.elapsedRealTimeNanos,
+                            dateTime = dateTimeNow,
                             latitude = null,
                             longitude = null
                         )
@@ -89,6 +72,6 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
 
     companion object {
         const val ACTION_PROCESS_UPDATES =
-            "com.example.timeitforward.action.PROCESS_UPDATES"
+            "com.example.timeitforward.action.TRANSITION_UPDATES"
     }
 }

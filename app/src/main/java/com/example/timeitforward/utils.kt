@@ -2,8 +2,12 @@ package com.example.timeitforward
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import com.example.timeitforward.model.db.timelog.TimeLog
 import com.google.android.gms.common.wrappers.Wrappers.packageManager
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.zip.CRC32
 
 fun getAppName(packageName: String, context: Context): String {
@@ -26,15 +30,6 @@ fun String.toColor(non_transparency: Int = 255): Color {
     return Color(hash.toUInt(16).toInt())
 }
 
-// LocalDate, LocaltimeからLocalDateTimeを作製
-fun getLocalDateTime(date: LocalDate?, time: LocalTime?): LocalDateTime? {
-    return if ((date != null) && (time != null)) {
-        LocalDateTime.of(date, time)
-    } else {
-        null
-    }
-}
-
 fun Long.toLocalDateTime(): LocalDateTime {
     return Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDateTime()
 }
@@ -52,17 +47,6 @@ fun Long.toHMS(): String {
     return "${hours}時間 ${minutes}分 ${seconds}.${bellowSec}秒"
 }
 
-// searchResultsをcontentTypeで絞ってupdateする。
-fun updateSearchResultsByContentType(contentType: String, viewModel: MainViewModel, tabData: List<String>) {
-    if (contentType == "その他") {
-        viewModel.findTimeLogByNotContentTypes(
-            tabData.filter { tabText -> tabText != "その他" }
-        )
-    } else {
-        viewModel.findTimeLogByContentType(contentType)
-    }
-}
-
 // searchResultsをcontentTypeとdateで絞ってupdateする。
 fun updateSearchResultsOfContentTypeBetweenDates(
     fromDate: LocalDate,
@@ -77,17 +61,67 @@ fun updateSearchResultsOfContentTypeBetweenDates(
     )
 }
 
+fun loadSetting(context: Context, key: String): Boolean {
+    val sharedPref = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
+    return sharedPref.getBoolean(key, false)
+}
+
+fun setSetting(context: Context, key: String, value: Boolean) {
+    val sharedPref = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
+    val sharedPrefEditor = sharedPref.edit()
+    sharedPrefEditor.putBoolean(key, value).apply()
+}
+
+fun setLastUpdateTime(context: Context, contentType: String, dateTime: LocalDateTime) {
+    val sharedPref = context.getSharedPreferences("LastUpdateTime", Context.MODE_PRIVATE)
+    val sharedPrefEditor = sharedPref.edit()
+    sharedPrefEditor.putLong(contentType, dateTime.toMilliSec()).apply()
+}
+
+fun loadLastUpdateTime(context: Context, contentType: String): LocalDateTime {
+    val sharedPref = context.getSharedPreferences("LastUpdateTime", Context.MODE_PRIVATE)
+    return sharedPref.getLong(contentType, 0L).toLocalDateTime()
+}
+
+fun setLastLocation(context: Context, contentType: String, content: String) {
+    val sharedPref = context.getSharedPreferences("LastLocation", Context.MODE_PRIVATE)
+    val sharedPrefEditor = sharedPref.edit()
+    sharedPrefEditor.putString(contentType, content).apply()
+}
+
+fun loadLastLocation(context: Context, contentType: String): String? {
+    val sharedPref = context.getSharedPreferences("LastLocation", Context.MODE_PRIVATE)
+    return sharedPref.getString(contentType, "")
+}
+fun setLastSleepState(context: Context, contentType: String, content: String) {
+    val sharedPref = context.getSharedPreferences("LastSleepState", Context.MODE_PRIVATE)
+    val sharedPrefEditor = sharedPref.edit()
+    sharedPrefEditor.putString(contentType, content).apply()
+}
+
+fun loadLastSleepState(context: Context, contentType: String): String? {
+    val sharedPref = context.getSharedPreferences("LastSleepState", Context.MODE_PRIVATE)
+    return sharedPref.getString(contentType, "")
+}
+
+fun String.parseLocation(): Triple<Int, Double?, Double?>{
+    return this.split(",").let{
+        Triple(it[0].toInt(), it[1].toDoubleOrNull(), it[2].toDoubleOrNull())
+    }
+}
+
 // For test (現在使用されてない). 各項目に10万件ログを入れてどうなるか
 private fun insertBigRecords(viewModel: MainViewModel) {
     val tabData = listOf("場所","睡眠", "アプリ")
     tabData.forEach { tabText ->
         repeat(100000) {
             insertTimeLog(
-                contentType = tabText,
-                timeContent = "",
-                fromDateTime = LocalDateTime.of(2022,1,1,1,1),
-                untilDateTime = LocalDateTime.of(2022,1,1,2,1),
-                viewModel = viewModel
+                TimeLog(
+                    contentType = tabText,
+                    timeContent = "",
+                    fromDateTime = LocalDateTime.of(2022,1,1,1,1),
+                    untilDateTime = LocalDateTime.of(2022,1,1,2,1)
+                ), viewModel
             )
         }
     }

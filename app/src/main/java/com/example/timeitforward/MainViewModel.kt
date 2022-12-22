@@ -13,7 +13,6 @@ import com.example.timeitforward.model.db.timelog.TimeLogRepository
 import com.example.timeitforward.model.db.transition.Transition
 import com.example.timeitforward.model.db.transition.TransitionRepository
 import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 
 class MainViewModel(application: Application) : ViewModel() {
 
@@ -80,56 +79,35 @@ class MainViewModel(application: Application) : ViewModel() {
         return timeLogRepository.getFirstLog()
     }
 
+    fun clearContent(contentType: String) {
+        timeLogRepository.clearContent(contentType)
+    }
+
     fun deleteTimeLog(id: Int) {
         timeLogRepository.deleteTimeLog(id)
     }
 
-    fun insertTransition(transition: Transition) {
-        transitionRepository.insertTransition(transition)
-    }
-
-    fun insertSleep(sleep: Sleep) {
-        sleepRepository.insertSleep(sleep)
+    fun clearTransitionTable() {
+        transitionRepository.clearTable()
     }
 
     fun getTransitionBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Transition> {
         return transitionRepository.getTransitionBetween(fromDateTime, untilDateTime)
     }
-}
 
+    fun clearSleepTable() {
+        sleepRepository.clearTable()
+    }
 
-// TimeLogの保存
-fun insertTimeLog(
-    contentType: String = "", timeContent: String = "",
-    fromDateTime: LocalDateTime?, untilDateTime: LocalDateTime?,
-    viewModel: MainViewModel
-) {
-    if (
-        (fromDateTime != null) // 開始時刻がnullでない
-        && (untilDateTime != null) // 終了時刻がnullでない
-        && (untilDateTime > fromDateTime) // 開始時間が終了時間より先
-        && (ChronoUnit.MINUTES.between(untilDateTime, fromDateTime) < 24 * 60) // 開始時刻と終了時刻の差が1日以内
-    ) {
-        // TimeLogをデータベースに挿入
-        viewModel.insertTimeLog(
-            TimeLog(
-                contentType = contentType.ifBlank { "不明" },
-                timeContent = timeContent.ifBlank { "不明" },
-                fromDateTime = fromDateTime,
-                untilDateTime = untilDateTime
-            )
-        )
-    } else {
-        // ログで通知
-        Log.e("insertTimeLog", "Invalid time record")
-
+    fun getSleepBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Sleep> {
+        return sleepRepository.getSleepBetween(fromDateTime, untilDateTime)
     }
 }
+
 // TimeLogオブジェクトでできる版
 fun insertTimeLog(timeLog: TimeLog, viewModel: MainViewModel) {
     if (
         (timeLog.untilDateTime > timeLog.fromDateTime) // 開始時間が終了時間より先
-        && (ChronoUnit.MINUTES.between(timeLog.untilDateTime, timeLog.fromDateTime) < 24 * 60) // 開始時刻と終了時刻の差が1日以内
     ) {
         // TimeLogをデータベースに挿入
         viewModel.insertTimeLog(timeLog)
@@ -138,12 +116,4 @@ fun insertTimeLog(timeLog: TimeLog, viewModel: MainViewModel) {
         Log.e("insertTimeLog", "Invalid time record")
 
     }
-}
-
-fun insertTransition(transition: Transition, viewModel: MainViewModel) {
-    viewModel.insertTransition(transition)
-}
-
-fun insertSleep(sleep: Sleep, viewModel: MainViewModel) {
-    viewModel.insertSleep(sleep)
 }

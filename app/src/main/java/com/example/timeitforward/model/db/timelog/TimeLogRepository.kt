@@ -99,4 +99,10 @@ class TimeLogRepository(private val timeLogDao: TimeLogDao) {
         }
     }
 
+    fun clearContent(contentType: String) {
+        coroutineScope.launch(Dispatchers.IO) {
+            timeLogDao.clearContent(contentType)
+        }
+    }
+
 }

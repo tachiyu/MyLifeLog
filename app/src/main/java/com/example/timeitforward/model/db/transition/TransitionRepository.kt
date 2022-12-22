@@ -22,4 +22,10 @@ class TransitionRepository(private val transitionDao: TransitionDao) {
             }.await()
         }
     }
+
+    fun clearTable() {
+        coroutineScope.launch(Dispatchers.IO) {
+            transitionDao.clearTable()
+        }
+    }
 }

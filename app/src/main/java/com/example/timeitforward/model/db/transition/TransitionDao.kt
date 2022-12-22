@@ -17,4 +17,7 @@ interface TransitionDao {
     @Query("SELECT * FROM transition " +
             "WHERE :fromDateTime <= datetime AND :untilDateTime >= datetime")
     fun getTransitionBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Transition>
+
+    @Query("DELETE FROM transition")
+    fun clearTable()
 }

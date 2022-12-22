@@ -15,28 +15,27 @@ private const val TAG = "SleepBroadcastReceiver"
 class SleepBroadcastReceiver: BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "onReceive() context:$context, intent:$intent")
         if (SleepClassifyEvent.hasEvents(intent)) {
-            Log.d(TAG, "received sleep event")
             val events = SleepClassifyEvent.extractEvents(intent)
+            Log.d(TAG, "receive ${events.size} sleep events")
             val dB: MainRoomDatabase = MainRoomDatabase.getInstance(context)
             val sleepRepository = SleepRepository(dB.SleepDao())
 
             for (event in events) {
-                            sleepRepository.insertSleep(
-                                Sleep(
-                                    confidence = event.confidence,
-                                    dateTime = event.timestampMillis.toLocalDateTime(),
-                                    brightness = event.light,
-                                    motion = event.motion
-                                )
-                            )
+                sleepRepository.insertSleep(
+                    Sleep(
+                        confidence = event.confidence,
+                        dateTime = event.timestampMillis.toLocalDateTime(),
+                        brightness = event.light,
+                        motion = event.motion
+                    )
+                )
             }
         }
     }
 
     companion object {
         const val ACTION_PROCESS_UPDATES =
-            "com.example.timeitforward.action.PROCESS_UPDATES"
+            "com.example.timeitforward.action.SLEEP_UPDATES"
     }
 }

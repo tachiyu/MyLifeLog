@@ -68,4 +68,7 @@ interface TimeLogDao {
             "LIMIT 1")
     fun findFirstLog(): List<TimeLog>
 
+    @Query("DELETE FROM time_log WHERE content_type = :contentType")
+    fun clearContent(contentType: String)
+
 }

@@ -14,7 +14,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timeitforward.model.AppLogManager
-import com.example.timeitforward.model.LocationLogManager
 import com.example.timeitforward.model.Permission
 import com.example.timeitforward.ui.theme.TimeItForwardTheme
 
@@ -49,8 +48,8 @@ class MainActivity : ComponentActivity(){
                             )
                         )
                         // 起動時の処理
-                        AppLogManager(this, viewModel).loadAppLogs()
-                        LocationLogManager(this, viewModel).loadLocationLogs()
+                        AppLogManager(this, viewModel).updateAppLogs()
+//                        LocationLogManager(this, viewModel).loadLocationLogs()
                         App(viewModel = viewModel)
                     }
                 }
