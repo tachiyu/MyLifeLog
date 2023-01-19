@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -20,7 +19,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.TimeItForward"
+        android:theme="@style/Theme.Mylifelog"
         tools:targetApi="31">
 
         <meta-data
@@ -31,7 +30,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.TimeItForward"
+            android:theme="@style/Theme.Mylifelog"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -45,7 +44,7 @@
             android:permission="com.google.android.gms.permission.ACTIVITY_RECOGNITION"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.example.timeitforward.ActivityUpdatesBroadcastReceiver.ACTION_PROCESS_UPDATE" />
+                <action android:name="com.example.myLifeLog.ActivityUpdatesBroadcastReceiver.ACTION_PROCESS_UPDATE" />
             </intent-filter>
         </receiver>
 
@@ -54,7 +53,7 @@
             android:permission="com.google.android.gms.permission.ACTIVITY_RECOGNITION"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.example.timeitforward.SleepBroadcastReceiver.ACTION_PROCESS_UPDATE" />
+                <action android:name="com.example.myLifeLog.SleepBroadcastReceiver.ACTION_PROCESS_UPDATE" />
             </intent-filter>
         </receiver>
 

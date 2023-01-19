@@ -9,7 +9,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.timeitforward"
+        applicationId "com.example.myLifeLog"
         minSdk 28
         targetSdk 33
         versionCode 1
@@ -48,7 +48,7 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
-    namespace 'com.example.timeitforward'
+    namespace 'com.example.myLifeLog'
 }
 
 dependencies {
