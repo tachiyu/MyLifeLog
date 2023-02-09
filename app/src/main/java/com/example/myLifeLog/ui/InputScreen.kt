@@ -15,7 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
-import com.example.myLifeLog.*
+import com.example.myLifeLog.MainViewModel
 import com.example.myLifeLog.R
 import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.vanpra.composematerialdialogs.MaterialDialog

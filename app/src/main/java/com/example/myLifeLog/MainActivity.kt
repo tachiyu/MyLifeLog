@@ -14,7 +14,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.myLifeLog.model.*
+import com.example.myLifeLog.model.apimanager.ActivityTransitionManager
+import com.example.myLifeLog.model.apimanager.SleepManager
+import com.example.myLifeLog.model.checkActivityPermission
+import com.example.myLifeLog.model.checkLocationPermission
+import com.example.myLifeLog.model.requestActivityAndLocationPermission
+import com.example.myLifeLog.model.requestUsageStatsPermission
 import com.example.myLifeLog.ui.theme.MylifelogTheme
 
 class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -46,7 +51,12 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
                             )
                         )
                         // 起動時の処理
-                        viewModel.updateAll()
+                        if (loadSetting(this, "IsActivityRecognitionSubscribed")) {
+                            ActivityTransitionManager.getInstance(this).startActivityUpdate()
+                        }
+                        if (loadSetting(this, "IsSleepDetectionSubscribed")) {
+                            SleepManager.getInstance(this).startSleepUpdate()
+                        }
                         App(viewModel = viewModel)
                     }
                 }

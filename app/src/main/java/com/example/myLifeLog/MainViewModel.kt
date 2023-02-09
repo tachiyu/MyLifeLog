@@ -21,7 +21,8 @@ import com.google.android.gms.location.DetectedActivity
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.pow
 
 class MainViewModel(private val application: Application) : ViewModel() {
 
@@ -122,7 +123,7 @@ class MainViewModel(private val application: Application) : ViewModel() {
     fun updateAppLogs() {
         val tag = "updateAppLogs"
         val contentType = "app"
-        Log.d(tag, "updateAppLogs called")
+        myLog(tag, "updateAppLogs called")
         val usageStatsManager: UsageStatsManager =
             application.applicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val usageEvents: UsageEvents = usageStatsManager.queryEvents(
@@ -198,51 +199,36 @@ class MainViewModel(private val application: Application) : ViewModel() {
     fun updateLocationLogs(){
         val tag = "updateLocationLogs"
         val contentType = "location"
-        Log.d(tag, "updateLocationLogs called")
-        val lastUpdateTime: LocalDateTime
-            = loadLastUpdateTime(application.applicationContext, contentType)
-        if (lastUpdateTime == 0L.toLocalDateTime()) {
-            Log.d(tag, "Error! there is no last update time to retrieve"); return
-        }
-//        val lastLocation: String = loadLastLocation(application.applicationContext)!!
-        val dateTimeNow : LocalDateTime = LocalDateTime.now()
-        val transitionEvents: List<Transition> =
-            getTransitionBetween(lastUpdateTime, dateTimeNow)
-
-//        var timeContent = lastLocation
-        val locContent = loadLastLocation(application.applicationContext)!!.toLocContent()
-        var act = locContent.activityType
-        val locId = locContent.locId
-        var lat = locContent.lat
-        var lon = locContent.lon
-        var fromDateTime = lastUpdateTime
-        var untilDateTime = dateTimeNow
+        myLog(tag, "updateLocationLogs called")
 
         if (loadSetting(application.applicationContext, "IsActivityRecognitionSubscribed")) {
+            val lastUpdateTime: LocalDateTime
+                    = loadLastUpdateTime(application.applicationContext, contentType)
+            if (lastUpdateTime == 0L.toLocalDateTime()) {
+                myLog(tag, "Error! there is no last update time to retrieve"); return
+            }
+            val dateTimeNow : LocalDateTime = LocalDateTime.now()
+            val transitionEvents: List<Transition> =
+                getTransitionBetween(lastUpdateTime, dateTimeNow)
+            val locContent = loadLastLocation(application.applicationContext)!!.toLocContent()
+            var act = locContent.activityType
+            val locId = locContent.locId
+            var lat = locContent.lat
+            var lon = locContent.lon
+            var fromDateTime = lastUpdateTime
+            var untilDateTime = dateTimeNow
             if (transitionEvents.isNotEmpty()) {
                 transitionEvents.forEach { event ->
                     when (event.transitionType) {
                         ActivityTransition.ACTIVITY_TRANSITION_ENTER -> {
                             fromDateTime = event.dateTime
-//                            timeContent = if (event.activityType == DetectedActivity.STILL) {
-//                                "${event.activityType},${event.latitude},${event.longitude}"
-//                            } else {
-//                                "${event.activityType},null,null"
-//                            }
                             act = event.activityType
                             lat = if (act == DetectedActivity.STILL) { event.latitude } else { null }
                             lon = if (act == DetectedActivity.STILL) { event.longitude } else { null }
                         }
                         ActivityTransition.ACTIVITY_TRANSITION_EXIT -> {
                             untilDateTime = event.dateTime
-//                            val (lastActivity, lastLatitude, lastLongitude) = timeContent.parseLocation()
                             if (event.activityType != act) {
-//                                timeContent =
-//                                    if (event.activityType == DetectedActivity.STILL) {
-//                                        "${event.activityType},${event.latitude},${event.longitude}"
-//                                    } else {
-//                                        "${event.activityType},null,null"
-//                                    }
                                 act = event.activityType
                                 lat = if (act == DetectedActivity.STILL) { event.latitude } else { null }
                                 lon = if (act == DetectedActivity.STILL) { event.longitude } else { null }
@@ -257,13 +243,13 @@ class MainViewModel(private val application: Application) : ViewModel() {
                 setLastUpdateTime(application.applicationContext, contentType, dateTimeNow)
                 setLastLocation(application.applicationContext, "$act,$locId,$lat,$lon")
             } else {
-                Log.d(tag, "transitionEvents is empty")
+                myLog(tag, "transitionEvents is empty")
                 setLastUpdateTime(application.applicationContext, contentType, dateTimeNow)
                 insertLocationTimeLog(act, locId, lat, lon, fromDateTime, untilDateTime)
 
             }
         } else {
-            Log.d(tag, "subscription to Activity Recognition is nothing")
+            myLog(tag, "subscription to Activity Recognition is nothing")
         }
     }
 
@@ -271,20 +257,19 @@ class MainViewModel(private val application: Application) : ViewModel() {
         val tag = "getNearLocation"
         val allLocations = getAllLocationNotLive()
         val nearLocations = allLocations.filter { loc ->
-            val dist2 = 6371 * ((lat/180*PI - loc.latitude /180*PI).pow(2.0) + (lon/180*PI - loc.longitude/180*PI).pow(2.0))
-            Log.d(tag, "$lat, $lon, ${loc.latitude}, ${loc.longitude}, $dist2")
-            dist2 < (50.0/1000).pow(2.0)
+            val dist = (((lat - loc.latitude).pow(2) + (lon - loc.longitude).pow(2)) * (PI / 180 * 6371 * 1000).pow(2)).pow(0.5)
+            myLog(tag, "$lat, $lon, ${loc.latitude}, ${loc.longitude}, $dist")
+            dist < 50
         }
-        Log.d(tag, "nearLocations: $nearLocations")
 
         return if (nearLocations.isEmpty()) {
-            Log.d(tag, "There is no near location saved")
+            myLog(tag, "There is no near location saved")
             val location = Location("", lat, lon)
             insertLocation(location)
             location.id = allLocations.size + 1
             location
         } else {
-            Log.d(tag, "There is near location saved")
+            myLog(tag, "There is near location saved")
             nearLocations[0]
         }
     }
@@ -292,7 +277,7 @@ class MainViewModel(private val application: Application) : ViewModel() {
     fun updateSleepLogs(){
         val tag = "updateSleepLogs"
         val contentType = "sleep"
-        Log.d(tag, "updateSleepLogs called")
+        myLog(tag, "updateSleepLogs called")
         val lastUpdateTime: LocalDateTime
             = loadLastUpdateTime(application.applicationContext, contentType)
         val dateTimeNow : LocalDateTime = LocalDateTime.now()
@@ -303,7 +288,7 @@ class MainViewModel(private val application: Application) : ViewModel() {
         var untilDateTime = lastUpdateTime
 
         if (sleepEvents.isNotEmpty()) {
-            Log.d(tag, "There are ${sleepEvents.size} events")
+            myLog(tag, "There are ${sleepEvents.size} events")
             sleepEvents.forEach { event ->
                 untilDateTime = event.dateTime
                 insertTimeLog(
@@ -326,7 +311,7 @@ class MainViewModel(private val application: Application) : ViewModel() {
             setLastUpdateTime(application.applicationContext, contentType, untilDateTime)
             setLastSleepState(application.applicationContext, timeContent)
         } else {
-            Log.d(tag, "sleepEvents is empty")
+            myLog(tag, "sleepEvents is empty")
         }
     }
 

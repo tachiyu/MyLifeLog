@@ -16,6 +16,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.myLifeLog.R
 
+const val TAG = "Permission"
+
 fun checkLocationPermission(context: Context): Boolean =
     if (Build.VERSION.SDK_INT >= 29) {
         ((ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -35,15 +37,14 @@ fun checkLocationPermission(context: Context): Boolean =
 
 fun checkActivityPermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= 29) {
-        (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
-                == PackageManager.PERMISSION_GRANTED)
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
     } else {
-        true
+        ContextCompat.checkSelfPermission(context, "com.google.android.gms.permission.ACTIVITY_RECOGNITION") == PackageManager.PERMISSION_GRANTED
     }
 }
 
 // True if the permission of usageStatsManager is allowed, else False
-private fun checkUsageStatsPermission(context: Context): Boolean {
+fun checkUsageStatsPermission(context: Context): Boolean {
     val aom: AppOpsManager = context.getSystemService(AppCompatActivity.APP_OPS_SERVICE) as AppOpsManager
     val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         aom.unsafeCheckOpNoThrow(

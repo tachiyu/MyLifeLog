@@ -1,14 +1,12 @@
 package com.example.myLifeLog
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.ui.graphics.Color
-import androidx.core.app.ActivityCompat
 import com.example.myLifeLog.model.apimanager.ActivityTransitionManager
 import com.example.myLifeLog.model.apimanager.SleepManager
+import com.example.myLifeLog.model.checkLocationPermission
 import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.google.android.gms.common.wrappers.Wrappers.packageManager
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -17,6 +15,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationToken
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.OnTokenCanceledListener
+import java.io.*
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -133,7 +132,6 @@ private fun insertBigRecords(viewModel: MainViewModel) {
 }
 
 fun subscribeAT(context: Context){
-    val contentType = "location"
     val key = "IsActivityRecognitionSubscribed"
     val activityTransitionManager = ActivityTransitionManager.getInstance(context)
     val locationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -141,10 +139,10 @@ fun subscribeAT(context: Context){
 //     ・ActivityRecognitionTransitionAPIにサブスクライブ
 //     ・Settings：IsActivityRecognitionSubscribedをtrueに
 //     ・lastLocation・lastUpdateTimeを更新
-        Log.d("", "subscribe to ActivityRecognition")
+        myLog("", "subscribe to ActivityRecognition")
         activityTransitionManager.startActivityUpdate()
         setSetting(context, key=key, bool=true)
-        setLastUpdateTime(context, contentType, LocalDateTime.now())
+        setLastUpdateTime(context, "location", LocalDateTime.now())
         doSomethingWithLocation(
             context, locationClient,
             onSuccess = {location -> setLastLocation(
@@ -175,7 +173,7 @@ fun subscribeSleep(context: Context){
     val key = "IsSleepDetectionSubscribed"
     val sleepManager = SleepManager.getInstance(context)
     if (!loadSetting(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
-        Log.d("subscribeSleep", "subscribe to ActivityRecognition")
+        myLog("subscribeSleep", "subscribe to ActivityRecognition")
 //     ・SleepAPIにサブスクライブ
 //     ・Settings：IsSleepDetectionSubscribedをtrueに
 //     ・lastSleep・lastUpdateTimeを更新
@@ -203,12 +201,8 @@ fun doSomethingWithLocation(context: Context,
 ){
     val tag = "doSomethingWithLocation"
     // check permission
-    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-        == PackageManager.PERMISSION_GRANTED
-        || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
-        == PackageManager.PERMISSION_GRANTED
-    ) {
-        Log.d(tag, "try to get location")
+    if (checkLocationPermission(context)) {
+        myLog(tag, "try to get location")
         locationClient.getCurrentLocation(
             Priority.PRIORITY_HIGH_ACCURACY,
             object : CancellationToken() {
@@ -218,20 +212,42 @@ fun doSomethingWithLocation(context: Context,
                 override fun isCancellationRequested() = false
             }
         ).addOnSuccessListener { location ->
-            Log.d(tag, "get location")
             if (location != null) {
-                Log.d(tag, "location: ${location.latitude} ${location.longitude}")
+                myLog(tag, "get location: ${location.latitude} ${location.longitude}")
                 onSuccess(location)
             } else {
-                Log.d(tag, "null location")
+                myLog(tag, "get null location")
                 onFailure()
             }
         }.addOnFailureListener {
-            Log.d(tag, "can not get location")
+            myLog(tag, "can not get location")
             onFailure()
         }
     } else {
-        Log.d(tag, "permission denied (either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION is required)")
+        myLog(tag, "permission denied (either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION is required)")
         return
     }
+}
+
+fun logToLocal(tag: String, msg: String, time: LocalDateTime) {
+    val str = "${time.toString()}/ $tag/ $msg"
+    val d = File("/data/data/com.example.myLifeLog/files")
+    if (!d.exists()) { d.mkdirs() }
+    val f = File("/data/data/com.example.myLifeLog/files/log.txt")
+    val bw = BufferedWriter(FileWriter(f, true))
+    bw.append(str)
+    bw.newLine()
+    bw.close()
+}
+
+fun myLog(tag: String, msg: String) {
+    Log.d(tag, msg)
+    logToLocal(tag, msg, LocalDateTime.now())
+}
+
+fun readLog(): List<String> {
+    val br = BufferedReader(FileReader(File("/data/data/com.example.myLifeLog/files/log.txt")))
+    val lines =  br.readLines()
+    br.close()
+    return lines
 }

@@ -1,5 +1,5 @@
 package com.example.myLifeLog
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myLifeLog.ui.MyNavHost
 

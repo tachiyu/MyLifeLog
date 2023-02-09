@@ -3,10 +3,10 @@ package com.example.myLifeLog.model.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.example.myLifeLog.model.db.MainRoomDatabase
 import com.example.myLifeLog.model.db.sleep.Sleep
 import com.example.myLifeLog.model.db.sleep.SleepRepository
+import com.example.myLifeLog.myLog
 import com.example.myLifeLog.toLocalDateTime
 import com.google.android.gms.location.SleepClassifyEvent
 
@@ -17,7 +17,7 @@ class SleepBroadcastReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (SleepClassifyEvent.hasEvents(intent)) {
             val events = SleepClassifyEvent.extractEvents(intent)
-            Log.d(TAG, "receive ${events.size} sleep events")
+            myLog(TAG, "receive ${events.size} sleep events")
             val dB: MainRoomDatabase = MainRoomDatabase.getInstance(context)
             val sleepRepository = SleepRepository(dB.SleepDao())
 

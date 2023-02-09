@@ -6,7 +6,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRow
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -94,15 +97,22 @@ fun TabBar(
     }
 }
 
+object PERIOD {
+    const val DAY = 0
+    const val WEEK = 1
+    const val MONTH = 2
+    const val OTHERS = 3
+}
+
 @Composable
 fun PeriodTabBar(modifier: Modifier = Modifier, periodTabIndex: Int, onTabSwitch: (Int, String) -> Unit){
     TabBar(
         modifier = modifier.height(56.dp),
         tabIndex = periodTabIndex,
         tabData = listOf(
-            stringResource(id = R.string.month),
+            stringResource(id = R.string.day),
             stringResource(id = R.string.week),
-            stringResource(id = R.string.day),),
+            stringResource(id = R.string.month),),
         onTabSwitch = onTabSwitch,
         backgroundColor = MaterialTheme.colors.secondaryVariant
     )

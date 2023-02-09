@@ -34,6 +34,7 @@ fun SettingScreenSetup(viewModel: MainViewModel) {
         allLocations,
         allTransitions,
         allSleeps,
+        readLog(),
         { viewModel.updateLocationLogs() }
     )
 }
@@ -44,6 +45,7 @@ fun SettingScreen(
     allLocations: List<Location>,
     allTransitions: List<Transition>,
     allSleep: List<Sleep>,
+    logs: List<String>,
     updateLocationLogs: () -> Unit
 ) {
     var cTabIdx by remember{ mutableStateOf(0) }
@@ -124,11 +126,19 @@ fun SettingScreen(
         ContentTabBar(
             modifier = Modifier,
             contentTabIndex = cTabIdx,
-            onTabSwitch = {
-                    index, _ -> cTabIdx = index
+            onTabSwitch = { index, _ ->
+                cTabIdx = index
             }
         )
-
+        Text("Log")
+        LazyColumn(modifier = Modifier
+            .weight(1f),
+            content = {
+            items(logs.reversed()) { item ->
+                Text(item)
+                }
+            }
+        )
     }
 }
 

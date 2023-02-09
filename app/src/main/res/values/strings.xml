@@ -14,7 +14,7 @@
     <string name="name_location">この場所に名前を付ける</string>
     <string name="close">閉じる</string>
     <string name="back">戻る</string>
-    <string name="update">すべてのログを更新</string>
+    <string name="update">ログを更新</string>
     <string name="no_log">---No Log---</string>
     <string name="null_location">不明な場所</string>
     <string name="input_others_log_recommendation">その他の時間ログも残してみましょう！</string>
