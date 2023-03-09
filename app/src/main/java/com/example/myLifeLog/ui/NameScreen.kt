@@ -30,8 +30,8 @@ fun NameScreen(
     locId: Int,
     lat: Double,
     lon: Double,
-    periodTabSelected: Int,
-    contentTabSelected: Int
+    period: Int,
+    contentType: Int
 ) {
     val nameLoc: (Location) -> Unit = { location -> viewModel.updateLocation(location) }
     val loc = LatLng(lat, lon)
@@ -39,7 +39,7 @@ fun NameScreen(
         position = CameraPosition.fromLatLngZoom(loc, 15f)
     }
     val navToSummary = {
-        navController.navigate("${DESTINATIONS.SUMMARY.str}/$periodTabSelected,$contentTabSelected")
+        navController.navigate("${DESTINATIONS.SUMMARY.str}/$period,$contentType")
     }
     val backHandlingEnabled by remember { mutableStateOf(true) }
     BackHandler(backHandlingEnabled) {

@@ -8,10 +8,7 @@ import com.example.myLifeLog.model.db.MainRoomDatabase
 import com.example.myLifeLog.model.db.transition.Transition
 import com.example.myLifeLog.model.db.transition.TransitionRepository
 import com.example.myLifeLog.myLog
-import com.google.android.gms.location.ActivityTransition
-import com.google.android.gms.location.ActivityTransitionResult
-import com.google.android.gms.location.DetectedActivity
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
 import java.time.LocalDateTime
 
 private const val TAG = "ActivityUpdatesBroadcastReceiver"
@@ -36,7 +33,7 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
                     event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER
                 ) {
                     doSomethingWithLocation(
-                        context, locationClient,
+                        context, locationClient,1, 5,
                         onSuccess = { location ->
                             transitionRepository.insertTransition(
                                 Transition(
@@ -44,7 +41,10 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
                                     transitionType = event.transitionType,
                                     dateTime = dateTimeNow,
                                     latitude = location.latitude,
-                                    longitude = location.longitude)) },
+                                    longitude = location.longitude
+                                )
+                            )
+                        },
                         onFailure = {
                             transitionRepository.insertTransition(
                                 Transition(
@@ -52,7 +52,11 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
                                     transitionType = event.transitionType,
                                     dateTime = dateTimeNow,
                                     latitude = null,
-                                    longitude = null)) })
+                                    longitude = null
+                                )
+                            )
+                        }
+                    )
                 } else {
                     myLog(TAG, "pushed without location info")
                     transitionRepository.insertTransition(
@@ -68,6 +72,7 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
             }
         }
     }
+
 
     companion object {
         const val ACTION_PROCESS_UPDATES =

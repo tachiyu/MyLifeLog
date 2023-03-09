@@ -16,13 +16,10 @@ import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.example.myLifeLog.model.db.timelog.TimeLogRepository
 import com.example.myLifeLog.model.db.transition.Transition
 import com.example.myLifeLog.model.db.transition.TransitionRepository
+import com.example.myLifeLog.ui.ContentType
 import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.DetectedActivity
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
-import kotlin.math.PI
-import kotlin.math.pow
 
 class MainViewModel(private val application: Application) : ViewModel() {
 
@@ -77,58 +74,30 @@ class MainViewModel(private val application: Application) : ViewModel() {
         locationRepository.updateLocation(location)
     }
 
-    private fun getAllLocationNotLive(): List<Location> {
-        return locationRepository.getAllLocationNotLive()
-    }
-
-    private fun getLastLogInContent(contentType: String): TimeLog? {
-        return timeLogRepository.getLastLogInContentType(contentType)
-    }
-
-    private fun getFistLog(): TimeLog? {
-        return timeLogRepository.getFirstLog()
-    }
-
-    fun clearContent(contentType: String) {
-        timeLogRepository.clearContent(contentType)
-    }
-
-    fun clearTransitionTable() {
-        transitionRepository.clearTable()
-    }
-
     private fun getTransitionBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Transition> {
         return transitionRepository.getTransitionBetween(fromDateTime, untilDateTime)
-    }
-
-    fun clearSleepTable() {
-        sleepRepository.clearTable()
     }
 
     private fun getSleepBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Sleep> {
         return sleepRepository.getSleepBetween(fromDateTime, untilDateTime)
     }
 
-    fun getFirstDate(): LocalDate {
-        return getFistLog().let {
-            if (it!=null) {
-                it.fromDateTime.toLocalDate()
-            } else {
-                LocalDate.now(ZoneId.systemDefault())
-            }
-        }
+    private fun getNearLocation(lat: Double, lon: Double): Location? {
+        return locationRepository.getNearLocation(lat, lon)
     }
 
     // 最後に保存されたAppログから最新までのAppログを取得しRoomに保存する
     fun updateAppLogs() {
         val tag = "updateAppLogs"
-        val contentType = "app"
+        val contentType = ContentType.APP
         myLog(tag, "updateAppLogs called")
         val usageStatsManager: UsageStatsManager =
             application.applicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val lastAppUpdatedTime = loadSharedPrefLong(application.applicationContext, "lastAppUpdatedTime")
+        val currentTime = System.currentTimeMillis()
         val usageEvents: UsageEvents = usageStatsManager.queryEvents(
-            getLastLogInContent(contentType)?.untilDateTime?.toMilliSec() ?:0, //untilDateTime of the latest app log or 0
-            System.currentTimeMillis()
+            lastAppUpdatedTime,
+            currentTime
         )
 
         var timeContent = ""
@@ -136,9 +105,16 @@ class MainViewModel(private val application: Application) : ViewModel() {
         var untilDateTime: LocalDateTime
 
         var isForeground = false
+        var isFirst = true
         while (usageEvents.hasNextEvent()) {
             val event: UsageEvents.Event = UsageEvents.Event()
             usageEvents.getNextEvent(event)
+            // もしAppLogがupdateされたのが初めて（lastAppUpdatedTime==0）なら
+            // 最初のAppLogの日付をfirstDateとして保存しておく（日付のドロップダウンリストなどに使用する)
+            if (isFirst && lastAppUpdatedTime == 0L) {
+                saveSharedPref(application.applicationContext, "firstAppLogTime", event.timeStamp)
+                isFirst = false
+            }
 
             if ("launcher" !in event.packageName) {
                 if (event.eventType== UsageEvents.Event.ACTIVITY_RESUMED) {
@@ -172,24 +148,25 @@ class MainViewModel(private val application: Application) : ViewModel() {
                 }
             }
         }
+
+        saveSharedPref(application.applicationContext, "lastAppUpdatedTime", currentTime)
     }
 
     fun insertLocationTimeLog(
-        acTyp: Int, locId: Int?, lat: Double?, lon: Double?, fromDateTime: LocalDateTime, untilDateTime: LocalDateTime
+        acTyp: Int, locId0: Int?, lat0: Double?, lon0: Double?, fromDateTime: LocalDateTime, untilDateTime: LocalDateTime
     ) {
-        var locId = locId
-        var lat = lat
-        var lon = lon
-        if (lat != null && lon != null) {
-            val locDb = getOrSetNearLocation(lat, lon)
-            locId = locDb.id
-            lat = locDb.latitude
-            lon = locDb.longitude
-        }
+        val (locId, lat, lon) =
+                if (lat0 != null && lon0 != null) {
+                    getOrSetNearLocation(lat0, lon0).let {
+                        listOf(it.id, it.latitude, it.longitude)
+                    }
+                } else {
+                    listOf(locId0, lat0, lon0)
+                }
         insertTimeLog(
             TimeLog(
-            "location",
-            "$acTyp,$locId,$lat, $lon",
+            ContentType.LOCATION,
+            "$acTyp,$locId,$lat,$lon",
                 fromDateTime,
                 untilDateTime
             )
@@ -198,19 +175,21 @@ class MainViewModel(private val application: Application) : ViewModel() {
 
     fun updateLocationLogs(){
         val tag = "updateLocationLogs"
-        val contentType = "location"
+        val context = application.applicationContext
         myLog(tag, "updateLocationLogs called")
 
-        if (loadSetting(application.applicationContext, "IsActivityRecognitionSubscribed")) {
+        if (loadSharedPrefBool(context, "IsActivityRecognitionSubscribed")) {
             val lastUpdateTime: LocalDateTime
-                    = loadLastUpdateTime(application.applicationContext, contentType)
+                    = loadSharedPrefLong(context, "lastLocationUpdatedTime").toLocalDateTime()
             if (lastUpdateTime == 0L.toLocalDateTime()) {
                 myLog(tag, "Error! there is no last update time to retrieve"); return
             }
             val dateTimeNow : LocalDateTime = LocalDateTime.now()
             val transitionEvents: List<Transition> =
-                getTransitionBetween(lastUpdateTime, dateTimeNow)
-            val locContent = loadLastLocation(application.applicationContext)!!.toLocContent()
+                getTransitionBetween(lastUpdateTime, dateTimeNow).sortedBy {
+                    it.dateTime
+                }
+            val locContent = loadSharedPrefStr(context, "lastLocation")!!.toLocContent()
             var act = locContent.activityType
             val locId = locContent.locId
             var lat = locContent.lat
@@ -240,11 +219,11 @@ class MainViewModel(private val application: Application) : ViewModel() {
                 }
                 untilDateTime = dateTimeNow
                 insertLocationTimeLog(act, locId, lat, lon, fromDateTime, untilDateTime)
-                setLastUpdateTime(application.applicationContext, contentType, dateTimeNow)
-                setLastLocation(application.applicationContext, "$act,$locId,$lat,$lon")
+                saveSharedPref(context, "lastLocationUpdatedTime", dateTimeNow.toMilliSec())
+                saveSharedPref(context, "lastLocation", "$act,$locId,$lat,$lon")
             } else {
                 myLog(tag, "transitionEvents is empty")
-                setLastUpdateTime(application.applicationContext, contentType, dateTimeNow)
+                saveSharedPref(context, "lastLocationUpdatedTime", dateTimeNow.toMilliSec())
                 insertLocationTimeLog(act, locId, lat, lon, fromDateTime, untilDateTime)
 
             }
@@ -253,35 +232,52 @@ class MainViewModel(private val application: Application) : ViewModel() {
         }
     }
 
-    private fun getOrSetNearLocation(lat: Double, lon: Double): Location {
-        val tag = "getNearLocation"
-        val allLocations = getAllLocationNotLive()
-        val nearLocations = allLocations.filter { loc ->
-            val dist = (((lat - loc.latitude).pow(2) + (lon - loc.longitude).pow(2)) * (PI / 180 * 6371 * 1000).pow(2)).pow(0.5)
-            myLog(tag, "$lat, $lon, ${loc.latitude}, ${loc.longitude}, $dist")
-            dist < 50
-        }
-
-        return if (nearLocations.isEmpty()) {
-            myLog(tag, "There is no near location saved")
-            val location = Location("", lat, lon)
-            insertLocation(location)
-            location.id = allLocations.size + 1
-            location
-        } else {
-            myLog(tag, "There is near location saved")
-            nearLocations[0]
-        }
+private fun getOrSetNearLocation(lat: Double, lon: Double): Location {
+    val tag = "getNearLocation"
+    val nearLocation = getNearLocation(lat, lon)
+    return if (nearLocation == null) {
+        myLog(tag, "There is no near location saved")
+        val location = Location("", lat, lon)
+        insertLocation(location)
+        location.id = loadSharedPrefInt(application.applicationContext, "locationsNum") + 1
+        saveSharedPref(application.applicationContext, "locationsNum", location.id)
+        location
+    } else {
+        myLog(tag, "There is near location saved")
+        nearLocation
     }
+}
+
+//    private fun getOrSetNearLocation(lat: Double, lon: Double): Location {
+//        val tag = "getNearLocation"
+//        val allLocations = getAllLocationNotLive()
+//        val nearLocations = allLocations.filter { loc ->
+//            val dist = (((lat - loc.latitude).pow(2) + (lon - loc.longitude).pow(2)) * (PI / 180 * 6371 * 1000).pow(2)).pow(0.5)
+//            myLog(tag, "$lat, $lon, ${loc.latitude}, ${loc.longitude}, $dist")
+//            dist < 50
+//        }
+//
+//        return if (nearLocations.isEmpty()) {
+//            myLog(tag, "There is no near location saved")
+//            val location = Location("", lat, lon)
+//            insertLocation(location)
+//            location.id = allLocations.size + 1
+//            location
+//        } else {
+//            myLog(tag, "There is near location saved")
+//            nearLocations[0]
+//        }
+//    }
 
     fun updateSleepLogs(){
         val tag = "updateSleepLogs"
-        val contentType = "sleep"
         myLog(tag, "updateSleepLogs called")
+        val contentType = ContentType.SLEEP
+        val context = application.applicationContext
         val lastUpdateTime: LocalDateTime
-            = loadLastUpdateTime(application.applicationContext, contentType)
+            = loadSharedPrefLong(context, "lastSleepUpdatedTime").toLocalDateTime()
         val dateTimeNow : LocalDateTime = LocalDateTime.now()
-        val lastSleepState: String = loadLastSleepState(application.applicationContext)!!
+        val lastSleepState: String = loadSharedPrefStr(context, "lastSleepState")!!
         val sleepEvents: List<Sleep> = getSleepBetween(lastUpdateTime, dateTimeNow)
         var timeContent = lastSleepState
         var fromDateTime = lastUpdateTime
@@ -308,8 +304,8 @@ class MainViewModel(private val application: Application) : ViewModel() {
                     "unsure"
                 }
             }
-            setLastUpdateTime(application.applicationContext, contentType, untilDateTime)
-            setLastSleepState(application.applicationContext, timeContent)
+            saveSharedPref(context, "lastSleepUpdatedTime", untilDateTime.toMilliSec())
+            saveSharedPref(context, "lastSleepState", timeContent)
         } else {
             myLog(tag, "sleepEvents is empty")
         }

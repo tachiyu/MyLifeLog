@@ -42,8 +42,8 @@ fun MyNavHost(
                 SummaryScreenSetup(
                     viewModel = viewModel,
                     navController = navController,
-                    periodTabSelected = args[0].toInt(),
-                    contentTabSelected = args[1].toInt()
+                    period0 = args[0].toInt(),
+                    contentType0 = args[1].toInt()
                 )
             } else {
                 SummaryScreenSetup(
@@ -65,8 +65,8 @@ fun MyNavHost(
                 locId = args[0].toInt(),
                 lat = args[1].toDouble(),
                 lon = args[2].toDouble(),
-                periodTabSelected = args[3].toInt(),
-                contentTabSelected = args[4].toInt()
+                period = args[3].toInt(),
+                contentType = args[4].toInt()
             )
         }
     }

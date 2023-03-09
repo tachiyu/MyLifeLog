@@ -32,7 +32,7 @@ class TimeLogRepository(private val timeLogDao: TimeLogDao) {
         }
     }
 
-    fun findTimeLogByContentType(contentType: String) {
+    fun findTimeLogByContentType(contentType: Int) {
         coroutineScope.launch(Dispatchers.Main) {
             searchResults.value = coroutineScope.async(Dispatchers.IO) {
                 return@async timeLogDao.findTimeLogByContentType(contentType)
@@ -40,7 +40,7 @@ class TimeLogRepository(private val timeLogDao: TimeLogDao) {
         }
     }
 
-    fun findTimeLogByNotContentTypes(contentTypes: List<String>) {
+    fun findTimeLogByNotContentTypes(contentTypes: List<Int>) {
         coroutineScope.launch(Dispatchers.Main) {
             searchResults.value = coroutineScope.async(Dispatchers.IO) {
                 return@async timeLogDao.findTimeLogByNotContentTypes(contentTypes)
@@ -59,32 +59,12 @@ class TimeLogRepository(private val timeLogDao: TimeLogDao) {
     fun findTimeLogOfContentTypeBetweenDateTimes(
         fromDateTime: LocalDateTime,
         untilDateTime: LocalDateTime,
-        content_type: String
+        content_type: Int
     ) { coroutineScope.launch(Dispatchers.Main) {
             searchResults.value = coroutineScope.async(Dispatchers.IO) {
                 return@async timeLogDao.findTimeLogOfContentTypeBetweenDateTimes(
                     fromDateTime, untilDateTime, content_type
                 )
-            }.await()
-        }
-    }
-
-    fun getLastLogInContentType(content_type: String): TimeLog? {
-        return runBlocking {
-            coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findLastLogInContentType(content_type).let {
-                    if (it.isEmpty()) { null } else { it[0] }
-                }
-            }.await()
-        }
-    }
-
-    fun getFirstLogInContentType(content_type: String): TimeLog? {
-        return runBlocking {
-            coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findFirstLogInContentType(content_type).let {
-                    if (it.isEmpty()) { null } else { it[0] }
-                }
             }.await()
         }
     }
@@ -99,7 +79,7 @@ class TimeLogRepository(private val timeLogDao: TimeLogDao) {
         }
     }
 
-    fun clearContent(contentType: String) {
+    fun clearContent(contentType: Int) {
         coroutineScope.launch(Dispatchers.IO) {
             timeLogDao.clearContent(contentType)
         }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
@@ -73,105 +72,162 @@ fun OthersIcon(modifier: Modifier = Modifier
         modifier = modifier)
 }
 
-// 汎用的なタブバー
 @Composable
-fun TabBar(
-    modifier: Modifier,
-    tabIndex: Int,
-    tabData: List<String>,
-    onTabSwitch: (Int, String) -> Unit,
-    backgroundColor: Color = MaterialTheme.colors.primary
-) {
+fun PeriodTabBar(modifier: Modifier = Modifier, period: Int, onTabSwitch: (Int) -> Unit){
     TabRow(
-        backgroundColor = backgroundColor,
         modifier = modifier,
-        selectedTabIndex = tabIndex,
+        selectedTabIndex = period,
+        backgroundColor = Color.White
     ) {
-        tabData.forEachIndexed { index, text ->
-            Tab(selected = tabIndex == index,
-                onClick = {
-                    onTabSwitch(index, text)
+        Period.All.forEach { period2 ->
+            Tab(
+                selected = period == period2,
+                onClick = { onTabSwitch(period2) },
+                text = {
+                    Text(
+                        text = stringResource(id = Period.getStringId(period2)),
+                        color = if (period == period2) {
+                            Color.Black
+                        } else {
+                            Color.Gray
+                        }
+                    )
                 },
-                text = { Text(text = text) })
+                selectedContentColor = Color(0xb7c4c333),
+                unselectedContentColor = Color.White
+            )
         }
     }
 }
 
-object PERIOD {
+object Period {
     const val DAY = 0
     const val WEEK = 1
     const val MONTH = 2
-    const val OTHERS = 3
+    val All = listOf<Int>(DAY, WEEK, MONTH)
+    fun getStringId(index: Int): Int {
+        return when(index) {
+            DAY -> R.string.day
+            WEEK -> R.string.week
+            MONTH -> R.string.month
+            else -> {
+                throw IllegalArgumentException("unknown period")
+            }
+        }
+    }
 }
 
-@Composable
-fun PeriodTabBar(modifier: Modifier = Modifier, periodTabIndex: Int, onTabSwitch: (Int, String) -> Unit){
-    TabBar(
-        modifier = modifier.height(56.dp),
-        tabIndex = periodTabIndex,
-        tabData = listOf(
-            stringResource(id = R.string.day),
-            stringResource(id = R.string.week),
-            stringResource(id = R.string.month),),
-        onTabSwitch = onTabSwitch,
-        backgroundColor = MaterialTheme.colors.secondaryVariant
-    )
-}
-
-object CONTENT_TYPES {
+object ContentType {
     const val APP = 0
     const val LOCATION = 1
     const val SLEEP = 2
     const val OTHERS = 3
+    val All = listOf<Int>(APP, LOCATION, SLEEP, OTHERS)
+    fun getStringId(index: Int): Int {
+        return when(index) {
+            APP -> R.string.app
+            LOCATION -> R.string.location
+            SLEEP -> R.string.sleep
+            OTHERS -> R.string.others
+            else -> {
+                throw IllegalArgumentException("unknown content type")
+            }
+        }
+    }
+    fun getIconId(index: Int): Int {
+        return when(index) {
+            APP -> R.drawable.app
+            LOCATION -> R.drawable.walking
+            SLEEP -> R.drawable.sleep
+            OTHERS -> R.drawable.others
+            else -> {
+                throw IllegalArgumentException("unknown content type")
+            }
+        }
+    }
 }
 
 @Composable
-fun ContentTabBar(modifier: Modifier = Modifier, contentTabIndex: Int, onTabSwitch: (Int, String) -> Unit) {
-    TabBar(
+fun ContentTypeTabBar(modifier: Modifier = Modifier,
+                      contentType: Int,
+                      onTabSwitch: (Int) -> Unit) {
+    TabRow(
         modifier = modifier,
-        tabIndex = contentTabIndex,
-        tabData = contentTypesShown(),
-        onTabSwitch = onTabSwitch,
-        backgroundColor = MaterialTheme.colors.secondary
-    )
+        selectedTabIndex = contentType,
+        backgroundColor = Color.White
+    ) {
+        ContentType.All.forEach { contentType2 ->
+            Tab(
+                selected = contentType == contentType2,
+                onClick = { onTabSwitch(contentType2) },
+                text = {
+                    Text(
+                        text = stringResource(id = ContentType.getStringId(contentType2)),
+                        color = if (contentType == contentType2) { Color.Black } else { Color.Gray }
+                    )
+                       },
+                icon = {
+                    Image(
+                        modifier = modifier.size(20.dp, 20.dp),
+                        alpha = if (contentType == contentType2) { 1f } else { .5f },
+                        painter = painterResource(id = ContentType.getIconId(contentType2)),
+                        contentDescription = stringResource(id = ContentType.getStringId(contentType2))
+                    )
+                },
+                selectedContentColor = Color(0xb7c4c333),
+                unselectedContentColor = Color.White
+            )
+        }
+    }
 }
 
-object DB {
+object DataType {
     const val LOCATION = 0
     const val TRANSITION = 1
     const val SLEEP = 2
+    val All = listOf<Int>(LOCATION, TRANSITION, SLEEP)
+    fun getString(index: Int): String {
+        return when(index) {
+            LOCATION -> "location"
+            TRANSITION -> "transition"
+            SLEEP -> "sleep"
+            else -> {
+                throw IllegalArgumentException("unknown data type")
+            }
+        }
+    }
+
 }
 
 @Composable
-fun DbTabBar(modifier: Modifier = Modifier, dBTabIndex: Int, onTabSwitch: (Int, String) -> Unit){
-    TabBar(
-        modifier = modifier.height(56.dp),
-        tabIndex = dBTabIndex,
-        tabData = listOf(
-            "location",
-            "transition",
-            "sleep"
-        ),
-        onTabSwitch = onTabSwitch,
-        backgroundColor = MaterialTheme.colors.secondaryVariant
-    )
-}
-
-@Composable
-fun contentTypesShown(): List<String>{
-    return listOf(
-        stringResource(id = R.string.app),
-        stringResource(id = R.string.location),
-        stringResource(id = R.string.sleep),
-        stringResource(id = R.string.others),
-        )
+fun DataTabBar(modifier: Modifier = Modifier, dataType: Int, onTabSwitch: (Int) -> Unit){
+    TabRow(
+        modifier = modifier,
+        selectedTabIndex = dataType,
+        backgroundColor = Color.White
+    ) {
+        DataType.All.forEach { dataType2 ->
+            Tab(
+                selected = dataType == dataType2,
+                onClick = { onTabSwitch(dataType2) },
+                text = {
+                    Text(
+                        text = DataType.getString(dataType2),
+                        color = if (dataType2 == dataType) { Color.Black } else { Color.Gray }
+                    )
+                },
+                selectedContentColor = Color(0xb7c4c333),
+                unselectedContentColor = Color.White
+            )
+        }
+    }
 }
 
 //　TimeLogの情報を表示
 @Composable
 fun TimeLogRow(
     id: Int,
-    contentType: String,
+    contentType: Int,
     content: String,
     fromDateTime: LocalDateTime,
     untilDateTime: LocalDateTime
@@ -181,10 +237,13 @@ fun TimeLogRow(
         .fillMaxWidth()
         .padding(5.dp)) {
         Text(id.toString(), modifier = Modifier.weight(0.1f))
-        if (contentType == "app") {
+        if (contentType == ContentType.APP) {
             AppIcon(appName = content, modifier = Modifier.size(40.dp, 40.dp))
         } else {
-            Text(contentType, modifier = Modifier.weight(0.1f))
+            Text(
+                text = stringResource(id = ContentType.getStringId(contentType)),
+                modifier = Modifier.weight(0.1f)
+            )
         }
         Text(getAppName(content, context = context), modifier = Modifier.weight(0.2f))
         Text(text = fromDateTime.toString(), modifier = Modifier.weight(0.2f))

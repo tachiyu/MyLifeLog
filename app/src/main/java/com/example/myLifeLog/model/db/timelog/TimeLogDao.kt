@@ -20,10 +20,10 @@ interface TimeLogDao {
     fun findTimeLogByContent(content: String): List<TimeLog>
 
     @Query("SELECT * FROM time_log WHERE content_type = :content_type")
-    fun findTimeLogByContentType(content_type: String): List<TimeLog>
+    fun findTimeLogByContentType(content_type: Int): List<TimeLog>
 
     @Query("SELECT * FROM time_log WHERE content_type NOT IN (:content_types)")
-    fun findTimeLogByNotContentTypes(content_types: List<String>): List<TimeLog>
+    fun findTimeLogByNotContentTypes(content_types: List<Int>): List<TimeLog>
 
     @Query("SELECT * FROM time_log WHERE NOT ((from_datetime >= :untilDateTime) AND (until_datetime <= :fromDateTime))")
     fun findOverlappingTimeLogs(
@@ -50,25 +50,25 @@ interface TimeLogDao {
     fun findTimeLogOfContentTypeBetweenDateTimes(
         fromDateTime: LocalDateTime,
         untilDateTime: LocalDateTime,
-        contentType: String
+        contentType: Int
     ): List<TimeLog>
 
     @Query( "SELECT * FROM time_log " +
             "WHERE content_type = :contentType " +
             "ORDER BY time_log_id DESC " +
             "LIMIT 1")
-    fun findLastLogInContentType(contentType: String): List<TimeLog>
+    fun findLastLogInContentType(contentType: Int): List<TimeLog>
 
     @Query( "SELECT * FROM time_log " +
             "WHERE content_type = :contentType " +
             "LIMIT 1")
-    fun findFirstLogInContentType(contentType: String): List<TimeLog>
+    fun findFirstLogInContentType(contentType: Int): List<TimeLog>
 
     @Query( "SELECT * FROM time_log " +
             "LIMIT 1")
     fun findFirstLog(): List<TimeLog>
 
     @Query("DELETE FROM time_log WHERE content_type = :contentType")
-    fun clearContent(contentType: String)
+    fun clearContent(contentType: Int)
 
 }

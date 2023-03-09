@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 @Entity(tableName="time_log")
 class TimeLog
     (
-    @ColumnInfo(name = "content_type") var contentType: String,
+    @ColumnInfo(name = "content_type") var contentType: Int,
     @ColumnInfo(name = "time_content") var timeContent: String,
     @ColumnInfo(name = "from_datetime") var fromDateTime: LocalDateTime,
     @ColumnInfo(name = "until_datetime") var untilDateTime: LocalDateTime

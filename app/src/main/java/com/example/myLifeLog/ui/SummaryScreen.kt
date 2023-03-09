@@ -36,10 +36,8 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
+import java.time.*
+import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.TimeUnit
 import kotlin.math.round
 
@@ -54,17 +52,17 @@ val LocalArgs = compositionLocalOf<Args> { error("no args found!") }
 fun SummaryScreenSetup(
     viewModel: MainViewModel,
     navController: NavController,
-    periodTabSelected: Int = PERIOD.DAY,
-    contentTabSelected: Int = CONTENT_TYPES.APP,
+    period0: Int = Period.DAY,
+    contentType0: Int = ContentType.APP,
 ) {
     val allTimeLogs by viewModel.allTimeLogs.observeAsState(listOf())
 
     val allLocations by viewModel.allLocations.observeAsState(listOf())
-    var pTabIdx by remember{ mutableStateOf(periodTabSelected) }
-    var cTabIdx by remember{ mutableStateOf(contentTabSelected) }
+    var period by remember{ mutableStateOf(period0) }
+    var contentType by remember{ mutableStateOf(contentType0) }
     val nameLoc: (Location) -> Unit = { location -> viewModel.updateLocation(location) }
     val navToName: (Int, Double, Double) -> Unit = { locId, lat, lon -> 
-        navController.navigate("${DESTINATIONS.NAME}/$locId,$lat,$lon,$pTabIdx,$cTabIdx") 
+        navController.navigate("${DESTINATIONS.NAME}/$locId,$lat,$lon,$period,$contentType") 
     }
     val args = Args(
         allLocations, nameLoc, navToName
@@ -73,14 +71,13 @@ fun SummaryScreenSetup(
     CompositionLocalProvider(LocalArgs provides args) {
         SummaryScreen(
             allTimeLogs = allTimeLogs,
-            firstDate = viewModel.getFirstDate(),
             updateAll = { viewModel.updateAll() },
-            navToInput = { navController.navigate("${DESTINATIONS.INPUT.str}/$pTabIdx,$cTabIdx") },
+            navToInput = { navController.navigate("${DESTINATIONS.INPUT.str}/$period,$contentType") },
             navToSetting = { navController.navigate(DESTINATIONS.SETTING.str) },
-            pTabIdx = pTabIdx,
-            onPTabChange = {index -> pTabIdx = index},
-            cTabIdx = cTabIdx,
-            onCTabChange = {index -> cTabIdx = index}
+            period = period,
+            onPTabChange = {period2 -> period = period2},
+            contentType = contentType,
+            onCTabChange = {contentType2 -> contentType = contentType2}
         )
     }
 }
@@ -88,18 +85,20 @@ fun SummaryScreenSetup(
 @Composable
 fun SummaryScreen(
     allTimeLogs: List<TimeLog>,
-    firstDate: LocalDate,
     updateAll: () -> Unit,
     navToInput: () -> Unit,
     navToSetting: () -> Unit,
-    pTabIdx: Int,
+    period: Int,
     onPTabChange: (Int) -> Unit,
-    cTabIdx: Int,
+    contentType: Int,
     onCTabChange: (Int) -> Unit,
 ) {
-    val contentTypes = listOf("app","location","sleep","others")
-    val contentType = contentTypes[cTabIdx]
-    val currentDate = LocalDate.now(ZoneId.systemDefault()) //現在の日付
+    // ドロップダウンの最初の日付。最初のAppLogの日付を使う。AppLogがまだ保存されていないとき(0の場合)、
+    // ドロップダウンの日付の量が多くなってしまうので、現在の日付にする。
+    val firstDate = loadSharedPrefLong(LocalContext.current, "firstAppLogTime").let {
+        if (it == 0L) LocalDate.now() else it.toLocalDateTime().toLocalDate()
+    }
+    val lastDate = LocalDate.now(ZoneId.systemDefault()) //現在の日付
     var cnt by remember { mutableStateOf(0) }
 
     Column(
@@ -112,7 +111,7 @@ fun SummaryScreen(
                 onClick = updateAll,
                 content = { Text(text = stringResource(id = R.string.update)) }
             )
-            if (contentType == "others") {
+            if (contentType == ContentType.OTHERS) {
                 Button(
                     onClick = navToInput,
                     modifier = Modifier.padding(10.dp),
@@ -120,43 +119,44 @@ fun SummaryScreen(
                 )
             }
         }
-        when(pTabIdx) {
-            PERIOD.MONTH -> MonthPage(
+        //集計期間の単位（日・週・月）を決めるタブ
+        PeriodTabBar(
+            modifier = Modifier,
+            period = period,
+            onTabSwitch = { period -> onPTabChange(period)}
+        )
+        when(period) {
+            Period.MONTH -> MonthPage(
                 modifier = Modifier.weight(2f),
-                currentDate = currentDate,
+                lastDate = lastDate,
                 firstDate = firstDate,
                 allTimeLogs = allTimeLogs,
                 contentType = contentType
             )
-            PERIOD.WEEK -> WeekPage(
+            Period.WEEK -> WeekPage(
                 modifier = Modifier.weight(2f),
-                currentDate = currentDate,
+                lastDate = lastDate,
                 firstDate = firstDate,
                 allTimeLogs = allTimeLogs,
                 contentType = contentType
             )
-            PERIOD.DAY -> DayPage(
+            Period.DAY -> DayPage(
                 modifier = Modifier.weight(2f),
-                currentDate = currentDate,
+                lastDate = lastDate,
                 firstDate = firstDate,
                 allTimeLogs = allTimeLogs,
                 contentType = contentType
             )
         }
-        //集計期間の単位（日・週・月）を決めるタブ
-        PeriodTabBar(
-            modifier = Modifier,
-            periodTabIndex = pTabIdx,
-            onTabSwitch = { index, _ -> onPTabChange(index)}
-        )
+
         //コンテンツタイプ（アプリ、場所など）を決めるタブ
-        ContentTabBar(
+        ContentTypeTabBar(
             modifier = Modifier,
-            contentTabIndex = cTabIdx,
+            contentType = contentType,
             onTabSwitch = {
-                index, _ -> onCTabChange(index)
+                contentType2 -> onCTabChange(contentType2)
                 // 隠しコマンド
-                if (index == 3 /* others */) {
+                if (contentType2 == ContentType.OTHERS) {
                     cnt++
                     if (cnt == 20) { navToSetting(); cnt = 0 }
                 } else {
@@ -170,27 +170,32 @@ fun SummaryScreen(
 @Composable
 fun DayPage(
     modifier: Modifier,
-    currentDate: LocalDate,
+    lastDate: LocalDate,
     firstDate: LocalDate,
     allTimeLogs: List<TimeLog>,
-    contentType: String
+    contentType: Int
 ) {
-    LocalArgs
     val heightAlpha = 2f
-    val dateList = mutableListOf<LocalDate>()
-    var tmpDate = currentDate
-    while (tmpDate>=firstDate) {
-        dateList.add(tmpDate)
-        tmpDate = tmpDate.minusDays(1)
+
+    val startDates = mutableListOf<LocalDate>()
+    val endDates = mutableListOf<LocalDate>()
+    val datesDisplayed = mutableListOf<String>()
+
+    var tmp = lastDate
+    while (tmp >= firstDate) {
+        startDates.add(tmp)
+        endDates.add(tmp)
+        datesDisplayed.add(tmp.toYMDE())
+        tmp = tmp.minusDays(1)
     }
-    val calcEndDate: (LocalDate) -> LocalDate = { selectedDate -> selectedDate }
     val calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>
             = { selectedDate, _ ->
         (0..23).toList().map { LocalDateTime.of(selectedDate, LocalTime.of(it, 0)) } }
     SummaryContent(
         modifier = modifier,
-        dateList = dateList,
-        calcEndDate = calcEndDate,
+        startDates = startDates,
+        endDates = endDates,
+        datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
         allTimeLogs = allTimeLogs,
@@ -201,20 +206,27 @@ fun DayPage(
 @Composable
 fun WeekPage(
     modifier: Modifier,
-    currentDate: LocalDate,
+    lastDate: LocalDate,
     firstDate: LocalDate,
     allTimeLogs: List<TimeLog>,
-    contentType: String,
+    contentType: Int,
 ) {
     val heightAlpha = 2f/6f
-    val dateList = mutableListOf<LocalDate>()
-    var tmpSunday = currentDate.minusDays(currentDate.dayOfWeek.value.toLong())
-    while (tmpSunday >= firstDate.minusDays(firstDate.dayOfWeek.value.toLong())) {
-        dateList.add(tmpSunday)
-        tmpSunday = tmpSunday.minusWeeks(1)
+
+    val startDates = mutableListOf<LocalDate>()
+    val endDates = mutableListOf<LocalDate>()
+    val datesDisplayed = mutableListOf<String>()
+
+    var tmpEnd = lastDate
+    var tmpStart = max(firstDate, tmpEnd.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
+    while (tmpEnd >= firstDate) {
+        endDates.add(tmpEnd)
+        startDates.add(tmpStart)
+        datesDisplayed.add("${tmpStart.toYMDE()} ~ ${tmpEnd.toYMDE()}")
+        tmpEnd = tmpStart.minusDays(1)
+        tmpStart = max(firstDate, tmpEnd.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
     }
-    val calcEndDate: (LocalDate) -> LocalDate
-            = { selectedDate -> selectedDate.plusWeeks(1).minusDays(1 ) }
+
     val calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>
             = { selectedDate, endDate ->
         val timeIndices = mutableListOf<LocalDateTime>()
@@ -226,10 +238,12 @@ fun WeekPage(
             tmpDate = tmpDate.plusDays(1)
         }
         timeIndices }
+
     SummaryContent(
         modifier = modifier,
-        dateList = dateList,
-        calcEndDate = calcEndDate,
+        startDates = startDates,
+        endDates = endDates,
+        datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
         allTimeLogs = allTimeLogs,
@@ -240,20 +254,26 @@ fun WeekPage(
 @Composable
 fun MonthPage(
     modifier: Modifier,
-    currentDate: LocalDate,
+    lastDate: LocalDate,
     firstDate: LocalDate,
     allTimeLogs: List<TimeLog>,
-    contentType: String
+    contentType: Int
 ) {
     val heightAlpha = 2f/24f
-    val dateList = mutableListOf<LocalDate>()
-    var tmpMonthDay = currentDate.withDayOfMonth(1)
-    while (tmpMonthDay >= firstDate.withDayOfMonth(1)) {
-        dateList.add(tmpMonthDay)
-        tmpMonthDay = tmpMonthDay.minusMonths(1)
+
+    val startDates = mutableListOf<LocalDate>()
+    val endDates = mutableListOf<LocalDate>()
+    val datesDisplayed = mutableListOf<String>()
+
+    var tmpEnd = lastDate
+    var tmpStart = max(firstDate, lastDate.withDayOfMonth(1))
+    while (tmpEnd >= firstDate) {
+        endDates.add(tmpEnd)
+        startDates.add(tmpStart)
+        datesDisplayed.add("${tmpStart.toYMDE()} ~ ${tmpEnd.toYMDE()}")
+        tmpEnd = tmpStart.minusDays(1)
+        tmpStart = max(firstDate, tmpEnd.withDayOfMonth(1))
     }
-    val calcEndDate: (LocalDate) -> LocalDate
-            = { selectedDate -> selectedDate.plusMonths(1).minusDays(1 ) }
     val calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>
             = { selectedDate, endDate ->
                 val timeIndices = mutableListOf<LocalDateTime>()
@@ -266,8 +286,9 @@ fun MonthPage(
             }
     SummaryContent(
         modifier = modifier,
-        dateList = dateList,
-        calcEndDate = calcEndDate,
+        startDates = startDates,
+        endDates = endDates,
+        datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
         allTimeLogs = allTimeLogs,
@@ -279,40 +300,47 @@ fun MonthPage(
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun SummaryContent(modifier: Modifier,
-                   dateList: List<LocalDate>,
-                   calcEndDate: (LocalDate) -> LocalDate,
+                   startDates: List<LocalDate>,
+                   endDates: List<LocalDate>,
+                   datesDisplayed: List<String>,
                    heightAlpha: Float,
                    calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>,
                    allTimeLogs: List<TimeLog>,
-                   contentType: String
+                   contentType: Int
 ) {
-    val pagerState = rememberPagerState(initialPage = dateList.size-1)
+    val pagerState = rememberPagerState(initialPage = 0)
     val coroutineScope = rememberCoroutineScope()
-    val dateList = dateList.reversed()
 
-    HorizontalPager(modifier = modifier, count = dateList.size, state = pagerState) { page ->
-        val selectedDate = dateList[page]
-        val endDate = calcEndDate(selectedDate)
+    HorizontalPager(
+        modifier = modifier,
+        count = startDates.size,
+        state = pagerState,
+        reverseLayout = true
+    ) { page ->
+        val startDate = startDates[page]
+        val endDate = endDates[page]
         val allTime
-            = LocalDateTime.of(endDate, LocalTime.MAX).toMilliSec() - LocalDateTime.of(selectedDate, LocalTime.MIN).toMilliSec()
-        val timeLogs = allTimeLogs.betweenOf(contentType, selectedDate, endDate).cropped(selectedDate, endDate)
+            = LocalDateTime.of(endDate, LocalTime.MAX).toMilliSec() - LocalDateTime.of(startDate, LocalTime.MIN).toMilliSec()
+        val timeLogs = allTimeLogs.betweenOf(contentType, startDate, endDate).cropped(startDate, endDate)
         Column {
-            DateSelectionDropDown(dateList = dateList, selectedDate = selectedDate,
-                onSelected = {
-                    coroutineScope.launch { pagerState.scrollToPage(dateList.indexOf(it)) }
-                })
-
+            DateSelectionDropDown(
+                dropDownList = datesDisplayed,
+                index = page,
+                onSelected = { index ->
+                    coroutineScope.launch { pagerState.scrollToPage(index) }
+                }
+            )
             var appNameSelected: String by remember{ mutableStateOf("") }
             val timeLineScrollState = rememberScrollState()
             val timeLogSummaryState = rememberLazyListState()
 
-            val timeIndices = calcTimeIndices(selectedDate, endDate)
+            val timeIndices = calcTimeIndices(startDate, endDate)
             val timeLine: List<TimeLog>
                 = timeLogs
                 .sortByDateTime()
                 .toCloseConcatenated()
                 .dropShortLogs(heightAlpha)
-                .toTimeGapFilled(selectedDate, endDate)
+                .toTimeGapFilled(startDate, endDate)
                 .toTimeIndexInserted(timeIndices)
 
             val timeLogSummaryList: List<TimeLogSummary> = timeLogs.toTimeLogSummaryList().sorted()
@@ -372,7 +400,6 @@ fun SummaryContent(modifier: Modifier,
             }
         }
     }
-
 }
 
 //TimeLogを表示するボックス。
@@ -420,9 +447,9 @@ fun TimeLogLine(
 @Composable
 fun DateSelectionDropDown(
     modifier: Modifier = Modifier,
-    dateList: List<LocalDate>,
-    selectedDate: LocalDate,
-    onSelected: (LocalDate) -> Unit,
+    dropDownList: List<String>,
+    index: Int,
+    onSelected: (Int) -> Unit,
 ){
     var dropDownExpanded: Boolean by remember { mutableStateOf(false) }
     Box(modifier = modifier
@@ -431,7 +458,7 @@ fun DateSelectionDropDown(
         contentAlignment = Alignment.Center
         ) {
         Text(
-            selectedDate.toString(),
+            dropDownList[index],
             modifier = Modifier
                 .clickable(onClick = {
                     dropDownExpanded = true
@@ -439,12 +466,12 @@ fun DateSelectionDropDown(
         DropdownMenu(
             expanded = dropDownExpanded,
             onDismissRequest = { dropDownExpanded = false }) {
-            dateList.forEach { item ->
+            dropDownList.forEachIndexed { index, item ->
                 DropdownMenuItem(onClick = {
                     dropDownExpanded = false
-                    onSelected(item)
+                    onSelected(index)
                 }) {
-                    Text(text = item.toString())
+                    Text(text = item)
                 }
             }
         }
@@ -494,13 +521,11 @@ fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<LocalDateTime>): Li
     return newTimeLogList
 }
 
-fun max(a: LocalDateTime, b: LocalDateTime) : LocalDateTime{
-    return if (a > b) { a } else { b }
-}
+fun max(a: LocalDateTime, b: LocalDateTime) : LocalDateTime  = if (a > b) a else b
 
-fun min(a: LocalDateTime, b: LocalDateTime) : LocalDateTime{
-    return if (a < b) { a } else { b }
-}
+fun max(a: LocalDate, b: LocalDate): LocalDate = if (a > b) a else b
+
+fun min(a: LocalDateTime, b: LocalDateTime) : LocalDateTime  = if (a < b) a else b
 
 fun List<TimeLog>.cropped(fromDate: LocalDate, untilDate: LocalDate)
     = this.map{
@@ -521,7 +546,7 @@ fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): Li
     if(this.isEmpty()) {
         newTimeLogList.add(
             TimeLog(
-                contentType = "",
+                contentType = -1,
                 fromDateTime = fromDateTime,
                 untilDateTime = untilDateTime,
                 timeContent = "__Dummy__")
@@ -536,7 +561,7 @@ fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): Li
             // ダミーTimeLogを追加する
             newTimeLogList.add(
                 TimeLog(
-                contentType = "" ,
+                contentType = -1 ,
                 fromDateTime = tmpDateTime,
                 untilDateTime = it.fromDateTime,
                 timeContent = "__Dummy__")
@@ -551,7 +576,7 @@ fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): Li
     if(tmpDateTime < untilDateTime) {
         newTimeLogList.add(
             TimeLog(
-                contentType = "",
+                contentType = -1,
                 fromDateTime = tmpDateTime,
                 untilDateTime = untilDateTime,
                 timeContent = "__Dummy__")
@@ -588,7 +613,7 @@ fun List<TimeLog>.toCloseConcatenated(): List<TimeLog> {
 }
 
 data class TimeLogSummary(
-    val contentType: String,
+    val contentType: Int,
     val timeContent: String,
     val duration: Long //millisecond
 )
@@ -597,14 +622,14 @@ data class TimeLogSummary(
 fun TimeLogSummaryRow(timeLogSummary: TimeLogSummary,
                       onClick: () -> Unit,
                       non_transparency: Int,
-                      contentType: String,
+                      contentType: Int,
                       allTime: Long
 ) {
     when(contentType) {
-        "app" -> AppLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
-        "location" -> LocationLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
-        "sleep" -> SleepLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
-        "others" -> OthersLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
+        ContentType.APP -> AppLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
+        ContentType.LOCATION -> LocationLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
+        ContentType.SLEEP -> SleepLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
+        ContentType.OTHERS-> OthersLogSummaryRow(timeLogSummary, onClick, non_transparency, allTime)
     }
 }
 
@@ -757,7 +782,7 @@ fun GoogleMapPopup(modifier: Modifier, locContent: LocContent, closeThis: () -> 
 }
 
 fun List<TimeLog>.toTimeLogSummaryList(): List<TimeLogSummary> {
-    val contentsSet: Set<Pair<String, String>> = this.map { Pair(it.timeContent, it.contentType) }.toSet()
+    val contentsSet: Set<Pair<String, Int>> = this.map { Pair(it.timeContent, it.contentType) }.toSet()
     val retList = mutableListOf<TimeLogSummary>()
     contentsSet.forEach { pair ->
         val sameTimeLogList = mutableListOf<TimeLog>()
@@ -783,7 +808,7 @@ fun List<TimeLog>.dropShortLogs(heightAlpha: Float): List<TimeLog> {
     return this.filter { timeLog -> calcHeight(timeLog, heightAlpha) > 1.dp }
 }
 
-fun List<TimeLog>.betweenOf(contentType: String, fromDate: LocalDate, untilDate: LocalDate)
+fun List<TimeLog>.betweenOf(contentType: Int, fromDate: LocalDate, untilDate: LocalDate)
     = this.filter { timeLog ->
         timeLog.contentType == contentType
                 && (timeLog.untilDateTime > LocalDateTime.of(fromDate, LocalTime.MIN))

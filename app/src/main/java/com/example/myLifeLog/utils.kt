@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.Color
 import com.example.myLifeLog.model.apimanager.ActivityTransitionManager
 import com.example.myLifeLog.model.apimanager.SleepManager
 import com.example.myLifeLog.model.checkLocationPermission
-import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.google.android.gms.common.wrappers.Wrappers.packageManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -17,8 +16,11 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.OnTokenCanceledListener
 import java.io.*
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.*
 import java.util.zip.CRC32
 
 fun getAppName(packageName: String, context: Context): String {
@@ -58,47 +60,53 @@ fun Long.toHMS(): String {
     return "${hours}時間 ${minutes}分 ${seconds}.${bellowSec}秒"
 }
 
-fun loadSetting(context: Context, key: String): Boolean {
-    val sharedPref = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
-    return sharedPref.getBoolean(key, false)
+//LocalDateを〇年〇月〇日〇曜日にパースする
+fun LocalDate.toYMDE(): String {
+    return this.format(DateTimeFormatter.ofPattern("yyyy年 MM月 dd日 (E)", Locale.JAPANESE))
 }
 
-fun setSetting(context: Context, key: String, bool: Boolean) {
-    val sharedPref = context.getSharedPreferences("Settings", Context.MODE_PRIVATE)
+fun saveSharedPref(context: Context, key: String, bool: Boolean) {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
     sharedPrefEditor.putBoolean(key, bool).apply()
 }
 
-fun setLastUpdateTime(context: Context, contentType: String, dateTime: LocalDateTime) {
-    val sharedPref = context.getSharedPreferences("LastUpdateTime", Context.MODE_PRIVATE)
+fun saveSharedPref(context: Context, key: String, long: Long) {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
-    sharedPrefEditor.putLong(contentType, dateTime.toMilliSec()).apply()
+    sharedPrefEditor.putLong(key, long).apply()
 }
 
-fun loadLastUpdateTime(context: Context, contentType: String): LocalDateTime {
-    val sharedPref = context.getSharedPreferences("LastUpdateTime", Context.MODE_PRIVATE)
-    return sharedPref.getLong(contentType, 0L).toLocalDateTime()
-}
-
-fun setLastLocation(context: Context, content: String) {
-    val sharedPref = context.getSharedPreferences("LastLocation", Context.MODE_PRIVATE)
+fun saveSharedPref(context: Context, key: String, str: String) {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
-    sharedPrefEditor.putString("location", content).apply()
+    sharedPrefEditor.putString(key, str).apply()
 }
 
-fun loadLastLocation(context: Context): String? {
-    val sharedPref = context.getSharedPreferences("LastLocation", Context.MODE_PRIVATE)
-    return sharedPref.getString("location", "")
-}
-fun setLastSleepState(context: Context, content: String) {
-    val sharedPref = context.getSharedPreferences("LastSleepState", Context.MODE_PRIVATE)
+fun saveSharedPref(context: Context, key: String, int: Int) {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
-    sharedPrefEditor.putString("sleep", content).apply()
+    sharedPrefEditor.putInt(key, int).apply()
 }
 
-fun loadLastSleepState(context: Context): String? {
-    val sharedPref = context.getSharedPreferences("LastSleepState", Context.MODE_PRIVATE)
-    return sharedPref.getString("sleep", "")
+fun loadSharedPrefBool(context: Context, key: String): Boolean {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
+    return sharedPref.getBoolean(key, false)
+}
+
+fun loadSharedPrefLong(context: Context, key: String): Long {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
+    return sharedPref.getLong(key, 0L)
+}
+
+fun loadSharedPrefStr(context: Context, key: String): String? {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
+    return sharedPref.getString(key, "")
+}
+
+fun loadSharedPrefInt(context: Context, key: String): Int {
+    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
+    return sharedPref.getInt(key, 0)
 }
 
 data class LocContent(
@@ -114,43 +122,34 @@ fun String.toLocContent(): LocContent{
     }
 }
 
-// For test. 各項目に10万件ログを入れてどうなるか
-private fun insertBigRecords(viewModel: MainViewModel) {
-    val tabData = listOf("場所","睡眠", "アプリ")
-    tabData.forEach { tabText ->
-        repeat(100000) {
-            viewModel.insertTimeLog(
-                TimeLog(
-                    contentType = tabText,
-                    timeContent = "",
-                    fromDateTime = LocalDateTime.of(2022,1,1,1,1),
-                    untilDateTime = LocalDateTime.of(2022,1,1,2,1)
-                )
-            )
-        }
-    }
-}
-
 fun subscribeAT(context: Context){
     val key = "IsActivityRecognitionSubscribed"
     val activityTransitionManager = ActivityTransitionManager.getInstance(context)
     val locationClient = LocationServices.getFusedLocationProviderClient(context)
-    if (!loadSetting(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
+    if (!loadSharedPrefBool(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
 //     ・ActivityRecognitionTransitionAPIにサブスクライブ
 //     ・Settings：IsActivityRecognitionSubscribedをtrueに
 //     ・lastLocation・lastUpdateTimeを更新
         myLog("", "subscribe to ActivityRecognition")
         activityTransitionManager.startActivityUpdate()
-        setSetting(context, key=key, bool=true)
-        setLastUpdateTime(context, "location", LocalDateTime.now())
+        saveSharedPref(context, key=key, bool=true)
+        saveSharedPref(context, "lastLocationUpdatedTime", LocalDateTime.now().toMilliSec())
         doSomethingWithLocation(
-            context, locationClient,
-            onSuccess = {location -> setLastLocation(
-                context, "3,,${location.latitude},${location.longitude}"
-            )},
-            onFailure = {setLastLocation(
-                context, "3,,null,null"
-            )}
+            context, locationClient, 1, 5,
+            onSuccess = {location ->
+                saveSharedPref(
+                    context,
+                    "lastLocation",
+                    "3,,${location.latitude},${location.longitude}"
+                )
+            },
+            onFailure = {
+                saveSharedPref(
+                    context,
+                    "lastLocation",
+                    "3,,null,null"
+                )
+            }
         )
     }
 }
@@ -158,74 +157,37 @@ fun subscribeAT(context: Context){
 fun stopSubscribeAT(context: Context, updateLocationLogs: () -> Unit){
     val key = "IsActivityRecognitionSubscribed"
     val activityTransitionManager = ActivityTransitionManager.getInstance(context)
-    if (loadSetting(context, key=key)) {
+    if (loadSharedPrefBool(context, key=key)) {
 //     ・ActivityRecognitionTransitionAPIのサブスクライブを解除
 //     ・Settings：IsActivityRecognitionSubscribedをfalseに
 //     ・updateLocationLogを実行
         activityTransitionManager.stopActivityUpdate()
-        setSetting(context, key=key, bool=false)
+        saveSharedPref(context, key=key, bool=false)
         updateLocationLogs()
     }
 }
 
 fun subscribeSleep(context: Context){
-    val contentType = "sleep"
-    val key = "IsSleepDetectionSubscribed"
+    val isSleepSubscribed = "IsSleepDetectionSubscribed"
     val sleepManager = SleepManager.getInstance(context)
-    if (!loadSetting(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
+    if (!loadSharedPrefBool(context, key=isSleepSubscribed)) { /*すでにサブスクライブされてるかチェック*/
         myLog("subscribeSleep", "subscribe to ActivityRecognition")
 //     ・SleepAPIにサブスクライブ
 //     ・Settings：IsSleepDetectionSubscribedをtrueに
 //     ・lastSleep・lastUpdateTimeを更新
         sleepManager.startSleepUpdate()
-        setSetting(context, key=key, bool=true)
-        setLastUpdateTime(context, contentType, LocalDateTime.now())
-        setLastSleepState(context, "awake")
+        saveSharedPref(context, key=isSleepSubscribed, bool=true)
+        saveSharedPref(context, "lastSleepUpdatedTime", LocalDateTime.now().toMilliSec())
+        saveSharedPref(context, "lastSleepState","awake")
     }
 }
 
 fun stopSubscribeSleep(context: Context){
     val key = "IsSleepDetectionSubscribed"
     val sleepManager = SleepManager.getInstance(context)
-    if (loadSetting(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
+    if (loadSharedPrefBool(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
         sleepManager.stopSleepUpdate()
-        setSetting(context, key=key, bool=false)
-    }
-}
-
-@SuppressLint("MissingPermission")
-fun doSomethingWithLocation(context: Context,
-                            locationClient: FusedLocationProviderClient,
-                            onSuccess: (android.location.Location) -> Unit,
-                            onFailure: () -> Unit
-){
-    val tag = "doSomethingWithLocation"
-    // check permission
-    if (checkLocationPermission(context)) {
-        myLog(tag, "try to get location")
-        locationClient.getCurrentLocation(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            object : CancellationToken() {
-                override fun onCanceledRequested(p0: OnTokenCanceledListener) =
-                    CancellationTokenSource().token
-
-                override fun isCancellationRequested() = false
-            }
-        ).addOnSuccessListener { location ->
-            if (location != null) {
-                myLog(tag, "get location: ${location.latitude} ${location.longitude}")
-                onSuccess(location)
-            } else {
-                myLog(tag, "get null location")
-                onFailure()
-            }
-        }.addOnFailureListener {
-            myLog(tag, "can not get location")
-            onFailure()
-        }
-    } else {
-        myLog(tag, "permission denied (either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION is required)")
-        return
+        saveSharedPref(context, key=key, bool=false)
     }
 }
 
@@ -250,4 +212,54 @@ fun readLog(): List<String> {
     val lines =  br.readLines()
     br.close()
     return lines
+}
+
+@SuppressLint("MissingPermission")
+fun doSomethingWithLocation(context: Context,
+                            locationClient: FusedLocationProviderClient,
+                            cnt: Int, //この関数の試行回数
+                            maxCnt: Int, //cntがこの値を超えると、試行をあきらめる
+                            onSuccess: (android.location.Location) -> Unit,
+                            onFailure: () -> Unit ){
+    val tag = "doSomethingWithLocation"
+    // check permission
+    if (checkLocationPermission(context)) {
+        myLog(tag, "try to get location (${cnt}th time")
+        locationClient.getCurrentLocation(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            object : CancellationToken() {
+                override fun onCanceledRequested(p0: OnTokenCanceledListener) =
+                    CancellationTokenSource().token
+                override fun isCancellationRequested() = false
+            }
+        ).addOnSuccessListener { location ->
+            if (location != null) {
+                myLog(tag, "get location: ${location.latitude} ${location.longitude}")
+                onSuccess(location)
+            } else {
+                myLog(tag, "get null location")
+                // cnt が maxCntを超えていなければ、再帰的に再試行。
+                if (cnt < maxCnt) {
+                    doSomethingWithLocation(
+                        context, locationClient, cnt+1, maxCnt, onSuccess, onFailure
+                    )
+                } else {
+                    onFailure()
+                }
+            }
+        }.addOnFailureListener {
+            myLog(tag, "can not get location")
+            // cnt が maxCntを超えていなければ、再帰的に再試行。
+            if (cnt < maxCnt) {
+                doSomethingWithLocation(
+                    context, locationClient, cnt+1, maxCnt, onSuccess, onFailure
+                )
+            } else {
+                onFailure()
+            }
+        }
+    } else {
+        myLog(tag, "permission denied (either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION is required)")
+        return
+    }
 }

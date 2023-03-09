@@ -64,7 +64,7 @@ fun InputScreen(
     val dialogColor = remember { Color(0xFF3700B3) }
 
     // 入力フィールドの値
-    val contentType = "others"
+    val contentType = ContentType.OTHERS
     var timeContent: String by remember { mutableStateOf("") }
     var fromDate: LocalDate? by remember { mutableStateOf(LocalDate.now()) }
     var untilDate: LocalDate? by remember { mutableStateOf(LocalDate.now()) }

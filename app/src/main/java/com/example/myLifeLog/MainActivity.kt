@@ -51,10 +51,10 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
                             )
                         )
                         // 起動時の処理
-                        if (loadSetting(this, "IsActivityRecognitionSubscribed")) {
+                        if (loadSharedPrefBool(this, "IsActivityRecognitionSubscribed")) {
                             ActivityTransitionManager.getInstance(this).startActivityUpdate()
                         }
-                        if (loadSetting(this, "IsSleepDetectionSubscribed")) {
+                        if (loadSharedPrefBool(this, "IsSleepDetectionSubscribed")) {
                             SleepManager.getInstance(this).startSleepUpdate()
                         }
                         App(viewModel = viewModel)

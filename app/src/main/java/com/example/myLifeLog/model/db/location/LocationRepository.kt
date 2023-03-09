@@ -20,10 +20,10 @@ class LocationRepository(private val locationDao: LocationDao) {
         }
     }
 
-    fun getAllLocationNotLive(): List<Location> {
+    fun getNearLocation(lat: Double, lon: Double): Location? {
         return runBlocking {
             coroutineScope.async(Dispatchers.IO) {
-                return@async locationDao.getAllLocationsNotLive()
+                return@async locationDao.getNearLocation(lat, lon)
             }.await()
         }
     }
