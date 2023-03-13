@@ -6,7 +6,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,6 +17,7 @@ import androidx.navigation.NavController
 import com.example.myLifeLog.MainViewModel
 import com.example.myLifeLog.R
 import com.example.myLifeLog.model.db.timelog.TimeLog
+import com.example.myLifeLog.toMilliSec
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.MaterialDialogButtons
 import com.vanpra.composematerialdialogs.MaterialDialogScope
@@ -38,8 +38,6 @@ fun InputScreenSetup(
     periodTabSelected: Int,
     contentTabSelected: Int
 ) {
-    val allTimeLogs by viewModel.allTimeLogs.observeAsState(listOf())
-
     val navToSummary = {
         navController.navigate("${DESTINATIONS.SUMMARY.str}/$periodTabSelected,$contentTabSelected")
     }
@@ -49,7 +47,6 @@ fun InputScreenSetup(
         navToSummary()
     }
     InputScreen(
-        allTimeLogs = allTimeLogs,
         insertTimeLog = { timeLog -> viewModel.insertTimeLog(timeLog) },
         navToSummary = { navToSummary() }
     )
@@ -57,7 +54,6 @@ fun InputScreenSetup(
 
 @Composable
 fun InputScreen(
-    allTimeLogs: List<TimeLog>,
     insertTimeLog: (TimeLog) -> Unit,
     navToSummary: () -> Unit
 ) {
@@ -70,8 +66,6 @@ fun InputScreen(
     var untilDate: LocalDate? by remember { mutableStateOf(LocalDate.now()) }
     var fromTime: LocalTime? by remember { mutableStateOf(null) }
     var untilTime: LocalTime? by remember { mutableStateOf(null) }
-
-    val timeLogs = allTimeLogs.betweenOf(contentType, LocalDate.MIN, LocalDate.MAX)
 
     var popupState by remember { mutableStateOf(false) }
 
@@ -165,8 +159,8 @@ fun InputScreen(
                         TimeLog(
                             contentType = contentType,
                             timeContent = timeContent,
-                            fromDateTime = LocalDateTime.of(fromDate, fromTime),
-                            untilDateTime = LocalDateTime.of(untilDate, untilTime),
+                            fromDateTime = LocalDateTime.of(fromDate, fromTime).toMilliSec(),
+                            untilDateTime = LocalDateTime.of(untilDate, untilTime).toMilliSec(),
                         )
                     )
                     navToSummary()
@@ -183,7 +177,6 @@ fun InputScreen(
                 color = MaterialTheme.colors.onPrimary
             )
         }
-        TimeLogsLazyColumn(timeLogs = timeLogs.reversed(), modifier = Modifier.weight(2f))
     }
 }
 

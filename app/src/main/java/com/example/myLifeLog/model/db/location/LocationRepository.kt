@@ -1,11 +1,9 @@
 package com.example.myLifeLog.model.db.location
 
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.*
 
 class LocationRepository(private val locationDao: LocationDao) {
 
-    val allLocations: LiveData<List<Location>> = locationDao.getAllLocations()
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
     fun insertLocation(location: Location) {
@@ -14,9 +12,11 @@ class LocationRepository(private val locationDao: LocationDao) {
         }
     }
 
-    fun updateLocation(location: Location) {
-        coroutineScope.launch(Dispatchers.IO) {
-            locationDao.updateLocation(location)
+    fun getAllLocations(): List<Location> {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async locationDao.getAllLocations()
+            }.await()
         }
     }
 
@@ -28,9 +28,18 @@ class LocationRepository(private val locationDao: LocationDao) {
         }
     }
 
-    fun clearTable() {
-        coroutineScope.launch(Dispatchers.IO) {
-            locationDao.clearTable()
+    fun getLocationById(id: Int): Location? {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async locationDao.getLocationById(id)
+            }.await()
         }
     }
+
+    fun updateLocation(location: Location) {
+        coroutineScope.launch(Dispatchers.IO) {
+            locationDao.updateLocation(location)
+        }
+    }
+
 }

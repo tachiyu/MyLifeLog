@@ -49,8 +49,8 @@ class ActivityTransitionManager  private constructor(private val context: Contex
                 ActivityTransitionRequest(transitions),
                 activityUpdatePendingIntent
             ).also {
-                it.addOnSuccessListener { myLog(TAG, "subscribe to sleep detection") }
-                it.addOnFailureListener { myLog(TAG, "can not subscribe to sleep detection") }
+                it.addOnSuccessListener { myLog(TAG, "subscribe to activity detection") }
+                it.addOnFailureListener { myLog(TAG, "can not subscribe to activity detection") }
             }
         }
     }
@@ -67,8 +67,8 @@ class ActivityTransitionManager  private constructor(private val context: Contex
             return
         }
         activityRecognitionClient.removeActivityTransitionUpdates(activityUpdatePendingIntent).also{
-            it.addOnSuccessListener { myLog(TAG, "stop subscribe to sleep detection") }
-            it.addOnFailureListener { myLog(TAG, "can not stop subscribe to sleep detection") }
+            it.addOnSuccessListener { myLog(TAG, "stop subscribe to activity detection") }
+            it.addOnFailureListener { myLog(TAG, "can not stop subscribe to activity detection") }
         }
     }
 

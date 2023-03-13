@@ -7,7 +7,6 @@ import com.example.myLifeLog.model.db.MainRoomDatabase
 import com.example.myLifeLog.model.db.sleep.Sleep
 import com.example.myLifeLog.model.db.sleep.SleepRepository
 import com.example.myLifeLog.myLog
-import com.example.myLifeLog.toLocalDateTime
 import com.google.android.gms.location.SleepClassifyEvent
 
 private const val TAG = "SleepBroadcastReceiver"
@@ -25,7 +24,7 @@ class SleepBroadcastReceiver: BroadcastReceiver() {
                 sleepRepository.insertSleep(
                     Sleep(
                         confidence = event.confidence,
-                        dateTime = event.timestampMillis.toLocalDateTime(),
+                        dateTime = event.timestampMillis,
                         brightness = event.light,
                         motion = event.motion
                     )

@@ -1,14 +1,10 @@
 package com.example.myLifeLog.model.db.sleep
 
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.*
-import java.time.LocalDateTime
 
 class SleepRepository(private val sleepDao: SleepDao) {
 
-    val allSleeps: LiveData<List<Sleep>> = sleepDao.getAllSleeps()
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
-
 
     fun insertSleep(sleep: Sleep) {
         coroutineScope.launch(Dispatchers.IO) {
@@ -16,17 +12,19 @@ class SleepRepository(private val sleepDao: SleepDao) {
         }
     }
 
-    fun getSleepBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Sleep> {
+    fun getAllSleeps(): List<Sleep> {
         return runBlocking {
             coroutineScope.async(Dispatchers.IO) {
-                return@async sleepDao.getSleepBetween(fromDateTime, untilDateTime)
+                return@async sleepDao.getAllSleeps()
             }.await()
         }
     }
 
-    fun clearTable() {
-        coroutineScope.launch(Dispatchers.IO) {
-            sleepDao.clearTable()
+    fun getSleepBetween(fromDateTime: Long, untilDateTime: Long): List<Sleep> {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async sleepDao.getSleepBetween(fromDateTime, untilDateTime)
+            }.await()
         }
     }
 }

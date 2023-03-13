@@ -1,12 +1,10 @@
 package com.example.myLifeLog.model.db.transition
 
-import androidx.lifecycle.LiveData
+import com.example.myLifeLog.myLog
 import kotlinx.coroutines.*
-import java.time.LocalDateTime
 
 class TransitionRepository(private val transitionDao: TransitionDao) {
 
-    val allTransition: LiveData<List<Transition>> = transitionDao.getAllTransitions()
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
     fun insertTransition(transition: Transition) {
@@ -15,7 +13,7 @@ class TransitionRepository(private val transitionDao: TransitionDao) {
         }
     }
 
-    fun getTransitionBetween(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime): List<Transition> {
+    fun getTransitionBetween(fromDateTime: Long, untilDateTime: Long): List<Transition> {
         return runBlocking {
             coroutineScope.async(Dispatchers.IO) {
                 return@async transitionDao.getTransitionBetween(fromDateTime, untilDateTime)
@@ -23,9 +21,12 @@ class TransitionRepository(private val transitionDao: TransitionDao) {
         }
     }
 
-    fun clearTable() {
-        coroutineScope.launch(Dispatchers.IO) {
-            transitionDao.clearTable()
+    fun getAllTransition(): List<Transition> {
+        return runBlocking {
+            myLog("getAllTransition", "called!")
+            coroutineScope.async(Dispatchers.IO) {
+                return@async transitionDao.getAllTransitions()
+            }.await()
         }
     }
 }

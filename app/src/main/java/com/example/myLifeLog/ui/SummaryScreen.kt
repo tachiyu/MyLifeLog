@@ -4,17 +4,19 @@ import android.content.Context
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,11 +41,13 @@ import kotlinx.coroutines.launch
 import java.time.*
 import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.round
 
 data class Args(
-    val allLocations: List<Location>,
-    val nameLoc: (Location) -> Unit,
+    val getLocationById: (Int) -> Location?,
+    val nameLocation: (Location) -> Unit,
     val navToName: (Int, Double, Double) -> Unit
 )
 val LocalArgs = compositionLocalOf<Args> { error("no args found!") }
@@ -53,24 +57,26 @@ fun SummaryScreenSetup(
     viewModel: MainViewModel,
     navController: NavController,
     period0: Int = Period.DAY,
-    contentType0: Int = ContentType.APP,
+    contentType0: Int = ContentType.LOCATION
 ) {
-    val allTimeLogs by viewModel.allTimeLogs.observeAsState(listOf())
-
-    val allLocations by viewModel.allLocations.observeAsState(listOf())
+    val findTimeLogs: (Int, Long, Long) -> List<TimeLog> = { contentType, fromDateTime, untilDateTime ->
+        viewModel.findTimeLog(contentType, fromDateTime, untilDateTime)
+    }
     var period by remember{ mutableStateOf(period0) }
     var contentType by remember{ mutableStateOf(contentType0) }
-    val nameLoc: (Location) -> Unit = { location -> viewModel.updateLocation(location) }
-    val navToName: (Int, Double, Double) -> Unit = { locId, lat, lon -> 
-        navController.navigate("${DESTINATIONS.NAME}/$locId,$lat,$lon,$period,$contentType") 
+
+    val getLocationById: (Int) -> Location? = { id -> viewModel.getLocationById(id)}
+    val updateLocation: (Location) -> Unit = { location -> viewModel.updateLocation(location) }
+    val navToName: (Int, Double, Double) -> Unit = { locId, lat, lon ->
+        navController.navigate("${DESTINATIONS.NAME}/$locId,$lat,$lon,$period,$contentType")
     }
     val args = Args(
-        allLocations, nameLoc, navToName
+        getLocationById, updateLocation, navToName
     )
 
     CompositionLocalProvider(LocalArgs provides args) {
         SummaryScreen(
-            allTimeLogs = allTimeLogs,
+            findTimeLogs = findTimeLogs,
             updateAll = { viewModel.updateAll() },
             navToInput = { navController.navigate("${DESTINATIONS.INPUT.str}/$period,$contentType") },
             navToSetting = { navController.navigate(DESTINATIONS.SETTING.str) },
@@ -84,14 +90,14 @@ fun SummaryScreenSetup(
 
 @Composable
 fun SummaryScreen(
-    allTimeLogs: List<TimeLog>,
+    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     updateAll: () -> Unit,
     navToInput: () -> Unit,
     navToSetting: () -> Unit,
     period: Int,
     onPTabChange: (Int) -> Unit,
     contentType: Int,
-    onCTabChange: (Int) -> Unit,
+    onCTabChange: (Int) -> Unit
 ) {
     // ドロップダウンの最初の日付。最初のAppLogの日付を使う。AppLogがまだ保存されていないとき(0の場合)、
     // ドロップダウンの日付の量が多くなってしまうので、現在の日付にする。
@@ -101,6 +107,9 @@ fun SummaryScreen(
     val lastDate = LocalDate.now(ZoneId.systemDefault()) //現在の日付
     var cnt by remember { mutableStateOf(0) }
 
+    // SummaryContentをrecomposeさせるためだけの値
+    var recomposeVal by remember { mutableStateOf(0) }
+
     Column(
         modifier = Modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.Bottom
@@ -108,14 +117,27 @@ fun SummaryScreen(
         Row() {
             Button(
                 modifier = Modifier.padding(10.dp),
-                onClick = updateAll,
-                content = { Text(text = stringResource(id = R.string.update)) }
+                onClick = {
+                    updateAll()
+                    recomposeVal++
+                          },
+                content = {
+                    Image(painter = painterResource(id = R.drawable.reload),
+                        modifier = Modifier.size(20.dp, 20.dp),
+                        contentDescription = "")
+                    Text(text = stringResource(id = R.string.reload))
+                }
             )
             if (contentType == ContentType.OTHERS) {
                 Button(
                     onClick = navToInput,
                     modifier = Modifier.padding(10.dp),
-                    content = { Text(text = stringResource(id = R.string.input_others)) }
+                    content = {
+                        Image(painter = painterResource(id = R.drawable.write),
+                            modifier = Modifier.size(20.dp, 20.dp),
+                            contentDescription = "")
+                        Text(text = stringResource(id = R.string.input_others))
+                    }
                 )
             }
         }
@@ -130,22 +152,25 @@ fun SummaryScreen(
                 modifier = Modifier.weight(2f),
                 lastDate = lastDate,
                 firstDate = firstDate,
-                allTimeLogs = allTimeLogs,
-                contentType = contentType
+                findTimeLogs = findTimeLogs,
+                contentType = contentType,
+                recomposeVal = recomposeVal
             )
             Period.WEEK -> WeekPage(
                 modifier = Modifier.weight(2f),
                 lastDate = lastDate,
                 firstDate = firstDate,
-                allTimeLogs = allTimeLogs,
-                contentType = contentType
+                findTimeLogs = findTimeLogs,
+                contentType = contentType,
+                recomposeVal = recomposeVal
             )
             Period.DAY -> DayPage(
                 modifier = Modifier.weight(2f),
                 lastDate = lastDate,
                 firstDate = firstDate,
-                allTimeLogs = allTimeLogs,
-                contentType = contentType
+                findTimeLogs = findTimeLogs,
+                contentType = contentType,
+                recomposeVal = recomposeVal
             )
         }
 
@@ -172,8 +197,9 @@ fun DayPage(
     modifier: Modifier,
     lastDate: LocalDate,
     firstDate: LocalDate,
-    allTimeLogs: List<TimeLog>,
-    contentType: Int
+    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
+    contentType: Int,
+    recomposeVal: Int
 ) {
     val heightAlpha = 2f
 
@@ -198,8 +224,9 @@ fun DayPage(
         datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
-        allTimeLogs = allTimeLogs,
-        contentType = contentType
+        findTimeLogs = findTimeLogs,
+        contentType = contentType,
+        recomposeVal = recomposeVal
     )
 }
 
@@ -208,8 +235,9 @@ fun WeekPage(
     modifier: Modifier,
     lastDate: LocalDate,
     firstDate: LocalDate,
-    allTimeLogs: List<TimeLog>,
+    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
+    recomposeVal: Int
 ) {
     val heightAlpha = 2f/6f
 
@@ -246,8 +274,9 @@ fun WeekPage(
         datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
-        allTimeLogs = allTimeLogs,
-        contentType = contentType
+        findTimeLogs = findTimeLogs,
+        contentType = contentType,
+        recomposeVal = recomposeVal
     )
 }
 
@@ -256,8 +285,9 @@ fun MonthPage(
     modifier: Modifier,
     lastDate: LocalDate,
     firstDate: LocalDate,
-    allTimeLogs: List<TimeLog>,
-    contentType: Int
+    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
+    contentType: Int,
+    recomposeVal: Int
 ) {
     val heightAlpha = 2f/24f
 
@@ -291,8 +321,9 @@ fun MonthPage(
         datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
-        allTimeLogs = allTimeLogs,
-        contentType = contentType
+        findTimeLogs = findTimeLogs,
+        contentType = contentType,
+        recomposeVal = recomposeVal
     )
 }
 
@@ -305,8 +336,9 @@ fun SummaryContent(modifier: Modifier,
                    datesDisplayed: List<String>,
                    heightAlpha: Float,
                    calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>,
-                   allTimeLogs: List<TimeLog>,
-                   contentType: Int
+                   findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
+                   contentType: Int,
+                   recomposeVal: Int
 ) {
     val pagerState = rememberPagerState(initialPage = 0)
     val coroutineScope = rememberCoroutineScope()
@@ -317,55 +349,76 @@ fun SummaryContent(modifier: Modifier,
         state = pagerState,
         reverseLayout = true
     ) { page ->
+
+        // 表示する日付
         val startDate = startDates[page]
         val endDate = endDates[page]
-        val allTime
-            = LocalDateTime.of(endDate, LocalTime.MAX).toMilliSec() - LocalDateTime.of(startDate, LocalTime.MIN).toMilliSec()
-        val timeLogs = allTimeLogs.betweenOf(contentType, startDate, endDate).cropped(startDate, endDate)
+        val startDateTime = LocalDateTime.of(startDate, LocalTime.MIN).toMilliSec()
+        val endDateTime = LocalDateTime.of(endDate, LocalTime.MAX).toMilliSec()
+
+        // 表示するリストの作成
+        val timeLogs = findTimeLogs(contentType, startDateTime, endDateTime).cropped(startDate, endDate)
+        val timeIndices = calcTimeIndices(startDate, endDate)
+        val timeLine: List<TimeLog>
+                = timeLogs
+            .sortByDateTime()
+            .toCloseConcatenated()
+            .dropShortLogs(heightAlpha)
+            .toTimeGapFilled(startDate, endDate)
+            .toTimeIndexInserted(timeIndices.map { it.toMilliSec() })
+        val timeLogSummaryList: List<TimeLogSummary> = timeLogs.toTimeLogSummaryList().sorted()
+
+        // Listのスクロール位置を管理する各種状態
+        val timeLogSummaryState = rememberLazyListState()
+        var appNameSelected: String by remember{ mutableStateOf("") }
+
+        // コンポーザブル
         Column {
+            //日付を選択するドロップダウンリスト
             DateSelectionDropDown(
+                modifier = Modifier.align(Alignment.CenterHorizontally),
                 dropDownList = datesDisplayed,
                 index = page,
                 onSelected = { index ->
                     coroutineScope.launch { pagerState.scrollToPage(index) }
                 }
             )
-            var appNameSelected: String by remember{ mutableStateOf("") }
-            val timeLineScrollState = rememberScrollState()
-            val timeLogSummaryState = rememberLazyListState()
 
-            val timeIndices = calcTimeIndices(startDate, endDate)
-            val timeLine: List<TimeLog>
-                = timeLogs
-                .sortByDateTime()
-                .toCloseConcatenated()
-                .dropShortLogs(heightAlpha)
-                .toTimeGapFilled(startDate, endDate)
-                .toTimeIndexInserted(timeIndices)
-
-            val timeLogSummaryList: List<TimeLogSummary> = timeLogs.toTimeLogSummaryList().sorted()
-
-            //timeLineのlazyList
-            Column(
+            // timeLineのlazyList
+            Box(
                 modifier = Modifier
                     .border(width = 1.dp, color = Color.Gray)
                     .weight(2f)
-                    .verticalScroll(timeLineScrollState)
             ) {
-                timeLine.forEach() { item ->
-                    TimeLogLine(timeLog = item, heightAlpha = heightAlpha,
-                        isPackageNameSelected = appNameSelected == item.timeContent,
-                        onClick = {
-                            appNameSelected = item.timeContent
-                            coroutineScope.launch {
-                                timeLogSummaryState.scrollToItem(
-                                    timeLogSummaryList.indexOfFirst { it.timeContent == item.timeContent }
-                                )
+                LazyColumn(
+                    state = LazyListState(firstVisibleItemIndex = timeLine.getTimeIndexNow())
+                ) {
+                    items(timeLine) { item ->
+                        TimeLogLine(timeLog = item, heightAlpha = heightAlpha,
+                            isPackageNameSelected = appNameSelected == item.timeContent,
+                            onClick = {
+                                appNameSelected = item.timeContent
+                                coroutineScope.launch {
+                                    timeLogSummaryState.scrollToItem(
+                                        timeLogSummaryList.indexOfFirst { it.timeContent == item.timeContent }
+                                    )
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
+
+                ClickableSpace(
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(min(page+1, startDates.size-1)) } }
+                )
+
+                ClickableSpace(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(max(page-1, 0)) } }
+                )
             }
+
 
             // timeLogSummaryのlazyList
             Box(
@@ -384,7 +437,7 @@ fun SummaryContent(modifier: Modifier,
                                 timeLogSummary = item,
                                 onClick = { appNameSelected = if (appNameSelected != item.timeContent) item.timeContent else "" },
                                 non_transparency = if(appNameSelected==item.timeContent) 255 else 128,
-                                allTime = allTime
+                                allTime = endDateTime - startDateTime
                             )
                         }
                     }
@@ -420,7 +473,8 @@ fun TimeLogLine(
                 .background(Color(0x88CCFFFF), shape = RoundedCornerShape(4.dp))
         ) {
             Text(
-                text = "${timeLog.fromDateTime.toLocalDate()} ${timeLog.fromDateTime.hour}:00~"
+                text = "${timeLog.fromDateTime.toLocalDateTime().toLocalDate()} " +
+                        "${timeLog.fromDateTime.toLocalDateTime().hour}:00~"
             )
         }
 
@@ -445,6 +499,21 @@ fun TimeLogLine(
 }
 
 @Composable
+fun ClickableSpace(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .width(40.dp)
+            .fillMaxHeight()
+            .clickable { onClick() }
+    ) {
+
+    }
+}
+
+@Composable
 fun DateSelectionDropDown(
     modifier: Modifier = Modifier,
     dropDownList: List<String>,
@@ -454,11 +523,12 @@ fun DateSelectionDropDown(
     var dropDownExpanded: Boolean by remember { mutableStateOf(false) }
     Box(modifier = modifier
         .padding(8.dp)
+        .clip(shape = RoundedCornerShape(5.dp))
         .background(Color.LightGray),
         contentAlignment = Alignment.Center
         ) {
         Text(
-            dropDownList[index],
+            "▼${dropDownList[index]}",
             modifier = Modifier
                 .clickable(onClick = {
                     dropDownExpanded = true
@@ -483,8 +553,9 @@ fun List<TimeLog>.sortByDateTime(): List<TimeLog> {
     return this.sortedBy { it.fromDateTime  }
 }
 
-//TimeLogリストに時刻を表すものをはさみこむ。toTimeGapFilledの行われたTimeLogリストでやること。
-fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<LocalDateTime>): List<TimeLog> {
+//TimeLogリストに時刻を表すTimeLog(TimeIndex)を挟んだもを返す。
+//toTimeGapFilledの行われたTimeLogリストでやること。
+fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<Long>): List<TimeLog> {
     if (this.isEmpty()){ return this }
 
     val newTimeLogList = mutableListOf<TimeLog>()
@@ -521,27 +592,45 @@ fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<LocalDateTime>): Li
     return newTimeLogList
 }
 
-fun max(a: LocalDateTime, b: LocalDateTime) : LocalDateTime  = if (a > b) a else b
+// 現在時刻以下で最大のTimeIndexの位置を取得する。
+// 現在時刻を超えるTimeIndexがなかった場合、0.dpを返す。
+fun List<TimeLog>.getTimeIndexNow(): Int {
+    var timeIndexPos = 0
+    var tmp = 0
+    val now = LocalDateTime.now().toMilliSec()
+    this.forEach { timeLog ->
+        if (timeLog.timeContent == "__IndexedDateTime__") {
+            if (timeLog.fromDateTime < now) {
+                tmp++
+                timeIndexPos += tmp
+                tmp = 0
+            } else {
+                return timeIndexPos - 1
+            }
+        } else {
+            tmp++
+        }
+    }
+    return 0
+}
 
 fun max(a: LocalDate, b: LocalDate): LocalDate = if (a > b) a else b
-
-fun min(a: LocalDateTime, b: LocalDateTime) : LocalDateTime  = if (a < b) a else b
 
 fun List<TimeLog>.cropped(fromDate: LocalDate, untilDate: LocalDate)
     = this.map{
         TimeLog(
             it.contentType,
             it.timeContent,
-            max(it.fromDateTime, LocalDateTime.of(fromDate, LocalTime.MIN)),
-            min(it.untilDateTime, LocalDateTime.of(untilDate, LocalTime.MAX))
+            max(it.fromDateTime, LocalDateTime.of(fromDate, LocalTime.MIN).toMilliSec()),
+            min(it.untilDateTime, LocalDateTime.of(untilDate, LocalTime.MAX).toMilliSec())
         )
     }
 
 //TimeLogList内のTimeLog間の時間をダミーLogで埋める（表示のため）
 fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): List<TimeLog> {
     val newTimeLogList = mutableListOf<TimeLog>()
-    val fromDateTime = LocalDateTime.of(fromDate, LocalTime.MIN)
-    val untilDateTime = LocalDateTime.of(untilDate, LocalTime.MAX)
+    val fromDateTime = LocalDateTime.of(fromDate, LocalTime.MIN).toMilliSec()
+    val untilDateTime = LocalDateTime.of(untilDate, LocalTime.MAX).toMilliSec()
     //TimeLogが空なら、すべてダミーで埋める。
     if(this.isEmpty()) {
         newTimeLogList.add(
@@ -590,23 +679,24 @@ fun List<TimeLog>.toCloseConcatenated(): List<TimeLog> {
     //元のTimeLogの要素数が1以下ならそのまま返す
     if (this.size <= 1){ return this }
 
-    val thrTimeSpan = TimeUnit.SECONDS.toMillis(5) //5秒を閾値とする
+    //間隔5秒以下で同じ内容なら結合
+    val thrTimeSpan = TimeUnit.SECONDS.toMillis(5)
     val newTimeLogList = mutableListOf<TimeLog>()
     var tmpTimeLog: TimeLog = this[0]
-    this.subList(1,lastIndex).forEach {
-        if(tmpTimeLog.timeContent==it.timeContent
-            && it.fromDateTime.toMilliSec() - tmpTimeLog.untilDateTime.toMilliSec() < thrTimeSpan
-        ){
-            tmpTimeLog = TimeLog(
-                contentType = tmpTimeLog.contentType,
-                fromDateTime = tmpTimeLog.fromDateTime,
-                untilDateTime = it.untilDateTime,
-                timeContent = tmpTimeLog.timeContent
-            )
-        } else {
-            newTimeLogList.add(tmpTimeLog)
-            tmpTimeLog = it
-        }
+    this.subList(1,lastIndex+1).forEach { it ->
+        tmpTimeLog = if (tmpTimeLog.timeContent == it.timeContent
+                && it.fromDateTime - tmpTimeLog.untilDateTime < thrTimeSpan
+            ){
+                TimeLog(
+                    contentType = tmpTimeLog.contentType,
+                    fromDateTime = tmpTimeLog.fromDateTime,
+                    untilDateTime = it.untilDateTime,
+                    timeContent = tmpTimeLog.timeContent
+                )
+            } else {
+                newTimeLogList.add(tmpTimeLog)
+                it
+            }
     }
     newTimeLogList.add(tmpTimeLog)
     return newTimeLogList
@@ -691,11 +781,13 @@ fun SleepLogSummaryRow(timeLogSummary: TimeLogSummary,
     ) {
         SleepIcon(sleepState = timeLogSummary.timeContent, modifier = Modifier.size(40.dp, 40.dp))
         Text(when(timeLogSummary.timeContent)
-        {"sleep" -> stringResource(id = R.string.sleep_state)
-            "awake" -> stringResource(id = R.string.awake_state)
-            "unsure" -> stringResource(id = R.string.unsure_state)
-            else -> ""
-        }, modifier = Modifier.weight(0.2f))
+            {"sleep" -> stringResource(id = R.string.sleep_state)
+                "awake" -> stringResource(id = R.string.awake_state)
+                "unsure" -> stringResource(id = R.string.unsure_state)
+                else -> ""
+            },
+            modifier = Modifier.weight(0.2f)
+        )
         Text(text = "${timeLogSummary.duration.toHMS()} ${round(timeLogSummary.duration.toDouble()/allTime.toDouble()*1000.0)/10.0}%", modifier = Modifier.weight(0.3f))
     }
 }
@@ -708,7 +800,6 @@ fun LocationLogSummaryRow(
     non_transparency: Int,
     allTime: Long,
 ) {
-    rememberCoroutineScope()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -720,9 +811,9 @@ fun LocationLogSummaryRow(
         ActivityIcon(activityType = locContent.activityType, modifier = Modifier.size(40.dp, 40.dp))
         if (locContent.activityType == DetectedActivity.STILL) {
             if (locContent.lat != null && locContent.lon != null) {
-                val locName: String = LocalArgs.current.allLocations[locContent.locId!!-1].name
+                val locName: String? = LocalArgs.current.getLocationById(locContent.locId!!)?.name
                 var popupState by remember { mutableStateOf(false) }
-                if (locName == "") {
+                if (locName == null || locName == "") {
                     Button(
                         onClick = { popupState = true },
                         modifier = Modifier
@@ -748,8 +839,8 @@ fun LocationLogSummaryRow(
             }
         } else { Text(modifier = Modifier
             .weight(0.2f)
-            .fillMaxWidth(), text = "") }
-
+            .fillMaxWidth(), text = "")
+        }
         Text(text = "${timeLogSummary.duration.toHMS()} ${round(timeLogSummary.duration.toDouble()/allTime.toDouble()*1000.0)/10.0}%", modifier = Modifier.weight(0.3f))
     }
 }
@@ -791,7 +882,7 @@ fun List<TimeLog>.toTimeLogSummaryList(): List<TimeLogSummary> {
                 sameTimeLogList.add(timeLog)
             }
         }
-        val duration = sameTimeLogList.sumOf { it.untilDateTime.toMilliSec() - it.fromDateTime.toMilliSec() }
+        val duration = sameTimeLogList.sumOf { it.untilDateTime - it.fromDateTime }
         retList.add(TimeLogSummary(
             timeContent = pair.first, contentType = pair.second, duration = duration
         ))
@@ -808,12 +899,5 @@ fun List<TimeLog>.dropShortLogs(heightAlpha: Float): List<TimeLog> {
     return this.filter { timeLog -> calcHeight(timeLog, heightAlpha) > 1.dp }
 }
 
-fun List<TimeLog>.betweenOf(contentType: Int, fromDate: LocalDate, untilDate: LocalDate)
-    = this.filter { timeLog ->
-        timeLog.contentType == contentType
-                && (timeLog.untilDateTime > LocalDateTime.of(fromDate, LocalTime.MIN))
-                && (timeLog.fromDateTime < LocalDateTime.of(untilDate, LocalTime.MAX))
-    }
-
 fun calcHeight(timeLog: TimeLog, heightAlpha: Float): Dp
-    = ((timeLog.untilDateTime.toMilliSec() - timeLog.fromDateTime.toMilliSec()).toDouble() / TimeUnit.MINUTES.toMillis(1) * heightAlpha).dp
+    = ((timeLog.untilDateTime - timeLog.fromDateTime).toDouble() / TimeUnit.MINUTES.toMillis(1) * heightAlpha).dp

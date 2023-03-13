@@ -1,11 +1,8 @@
 package com.example.myLifeLog.ui
 
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
@@ -19,10 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.myLifeLog.R
-import com.example.myLifeLog.getAppName
-import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.google.android.gms.location.DetectedActivity
-import java.time.LocalDateTime
 
 // アプリの名前からアイコンイメージを取得
 @Composable
@@ -93,7 +87,6 @@ fun PeriodTabBar(modifier: Modifier = Modifier, period: Int, onTabSwitch: (Int) 
                         }
                     )
                 },
-                selectedContentColor = Color(0xb7c4c333),
                 unselectedContentColor = Color.White
             )
         }
@@ -122,7 +115,7 @@ object ContentType {
     const val LOCATION = 1
     const val SLEEP = 2
     const val OTHERS = 3
-    val All = listOf<Int>(APP, LOCATION, SLEEP, OTHERS)
+    val All = listOf<Int>(LOCATION, APP, SLEEP, OTHERS)
     fun getStringId(index: Int): Int {
         return when(index) {
             APP -> R.string.app
@@ -153,7 +146,7 @@ fun ContentTypeTabBar(modifier: Modifier = Modifier,
                       onTabSwitch: (Int) -> Unit) {
     TabRow(
         modifier = modifier,
-        selectedTabIndex = contentType,
+        selectedTabIndex = ContentType.All.indexOf(contentType),
         backgroundColor = Color.White
     ) {
         ContentType.All.forEach { contentType2 ->
@@ -174,7 +167,6 @@ fun ContentTypeTabBar(modifier: Modifier = Modifier,
                         contentDescription = stringResource(id = ContentType.getStringId(contentType2))
                     )
                 },
-                selectedContentColor = Color(0xb7c4c333),
                 unselectedContentColor = Color.White
             )
         }
@@ -216,56 +208,7 @@ fun DataTabBar(modifier: Modifier = Modifier, dataType: Int, onTabSwitch: (Int) 
                         color = if (dataType2 == dataType) { Color.Black } else { Color.Gray }
                     )
                 },
-                selectedContentColor = Color(0xb7c4c333),
                 unselectedContentColor = Color.White
-            )
-        }
-    }
-}
-
-//　TimeLogの情報を表示
-@Composable
-fun TimeLogRow(
-    id: Int,
-    contentType: Int,
-    content: String,
-    fromDateTime: LocalDateTime,
-    untilDateTime: LocalDateTime
-) {
-    val context: Context = LocalContext.current
-    Row(modifier = Modifier
-        .fillMaxWidth()
-        .padding(5.dp)) {
-        Text(id.toString(), modifier = Modifier.weight(0.1f))
-        if (contentType == ContentType.APP) {
-            AppIcon(appName = content, modifier = Modifier.size(40.dp, 40.dp))
-        } else {
-            Text(
-                text = stringResource(id = ContentType.getStringId(contentType)),
-                modifier = Modifier.weight(0.1f)
-            )
-        }
-        Text(getAppName(content, context = context), modifier = Modifier.weight(0.2f))
-        Text(text = fromDateTime.toString(), modifier = Modifier.weight(0.2f))
-        Text(text = untilDateTime.toString(), modifier = Modifier.weight(0.2f))
-    }
-}
-
-// TimeLogRowのlazy column
-@Composable
-fun TimeLogsLazyColumn(timeLogs: List<TimeLog>, modifier: Modifier=Modifier){
-    LazyColumn(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(10.dp)
-    ) {
-        items(timeLogs) { item ->
-            TimeLogRow(
-                id = item.id,
-                contentType = item.contentType,
-                content = item.timeContent,
-                fromDateTime = item.fromDateTime,
-                untilDateTime = item.untilDateTime
             )
         }
     }

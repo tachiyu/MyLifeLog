@@ -1,88 +1,33 @@
 package com.example.myLifeLog.model.db.timelog
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import com.example.myLifeLog.myLog
 import kotlinx.coroutines.*
-import java.time.LocalDateTime
 
 class TimeLogRepository(private val timeLogDao: TimeLogDao) {
 
-    val allTimeLogs: LiveData<List<TimeLog>> = timeLogDao.getAllTimeLogs()
-    val searchResults = MutableLiveData<List<TimeLog>>()
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
-
 
     fun insertTimeLog(timeLog: TimeLog) {
         coroutineScope.launch(Dispatchers.IO) {
+            myLog("insertTimeLogs", "called!")
             timeLogDao.insertTimeLog(timeLog)
         }
     }
 
-    fun deleteTimeLog(id: Int) {
-        coroutineScope.launch(Dispatchers.IO) {
-            timeLogDao.deleteTimeLog(id)
-        }
-    }
-
-    fun findTimeLogByContent(content: String) {
-        coroutineScope.launch(Dispatchers.Main) {
-            searchResults.value = coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findTimeLogByContent(content)
-            }.await()
-        }
-    }
-
-    fun findTimeLogByContentType(contentType: Int) {
-        coroutineScope.launch(Dispatchers.Main) {
-            searchResults.value = coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findTimeLogByContentType(contentType)
-            }.await()
-        }
-    }
-
-    fun findTimeLogByNotContentTypes(contentTypes: List<Int>) {
-        coroutineScope.launch(Dispatchers.Main) {
-            searchResults.value = coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findTimeLogByNotContentTypes(contentTypes)
-            }.await()
-        }
-    }
-
-    fun findTimeLogBetweenDateTimes(fromDateTime: LocalDateTime, untilDateTime: LocalDateTime) {
-        coroutineScope.launch(Dispatchers.Main) {
-            searchResults.value = coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findTimeLogBetweenDateTimes(fromDateTime, untilDateTime)
-            }.await()
-        }
-    }
-
-    fun findTimeLogOfContentTypeBetweenDateTimes(
-        fromDateTime: LocalDateTime,
-        untilDateTime: LocalDateTime,
-        content_type: Int
-    ) { coroutineScope.launch(Dispatchers.Main) {
-            searchResults.value = coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findTimeLogOfContentTypeBetweenDateTimes(
-                    fromDateTime, untilDateTime, content_type
-                )
-            }.await()
-        }
-    }
-
-    fun getFirstLog(): TimeLog? {
+    fun findTimeLogs(contentType: Int, fromDateTime: Long, untilDateTime: Long): List<TimeLog> {
         return runBlocking {
             coroutineScope.async(Dispatchers.IO) {
-                return@async timeLogDao.findFirstLog().let {
-                    if (it.isEmpty()) { null } else { it[0] }
-                }
+                myLog("findTimeLogs", "called!")
+                return@async timeLogDao.findTimeLogs(contentType, fromDateTime, untilDateTime)
             }.await()
         }
     }
 
-    fun clearContent(contentType: Int) {
-        coroutineScope.launch(Dispatchers.IO) {
-            timeLogDao.clearContent(contentType)
+    fun getAllTimeLogs(): List<TimeLog> {
+        return runBlocking {
+            coroutineScope.async(Dispatchers.IO) {
+                return@async timeLogDao.getAllTimeLogs()
+            }.await()
         }
     }
-
 }

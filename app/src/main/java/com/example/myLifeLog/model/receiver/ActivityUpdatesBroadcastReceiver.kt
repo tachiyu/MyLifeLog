@@ -8,6 +8,7 @@ import com.example.myLifeLog.model.db.MainRoomDatabase
 import com.example.myLifeLog.model.db.transition.Transition
 import com.example.myLifeLog.model.db.transition.TransitionRepository
 import com.example.myLifeLog.myLog
+import com.example.myLifeLog.toMilliSec
 import com.google.android.gms.location.*
 import java.time.LocalDateTime
 
@@ -25,7 +26,7 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
 
             for (event in result.transitionEvents) {
                 myLog(TAG, "get event: ActivityType=${event.activityType}, TransitionType=${event.transitionType}")
-                val dateTimeNow = LocalDateTime.now()
+                val dateTimeNow = LocalDateTime.now().toMilliSec()
                 //ActivityがSTILL、TransitionがEnterならLocationを取得しつつinsertTransition。
                 //Activity・Transitionがそれ以外か、位置のパーミッションがない場合は、Locationは取得しないでinsertTransition。
                 if (
@@ -33,7 +34,7 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
                     event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER
                 ) {
                     doSomethingWithLocation(
-                        context, locationClient,1, 5,
+                        context, locationClient,1, 10,
                         onSuccess = { location ->
                             transitionRepository.insertTransition(
                                 Transition(

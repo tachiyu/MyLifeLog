@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.myLifeLog.*
@@ -17,22 +16,19 @@ import com.example.myLifeLog.model.db.sleep.Sleep
 import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.example.myLifeLog.model.db.transition.Transition
 
-private const val TAG = "SettingScreen"
-
 @Composable
 fun SettingScreenSetup(viewModel: MainViewModel) {
-    val allTimeLogs by viewModel.allTimeLogs.observeAsState(listOf())
-    val allLocations by viewModel.allLocations.observeAsState(listOf())
-    val allTransitions by viewModel.allTransitions.observeAsState(listOf())
-    val allSleeps by viewModel.allSleeps.observeAsState(listOf())
+    val allTimeLogs = viewModel.getAllTimeLogs()
+    val allLocations = viewModel.getAllLocations()
+    val allTransitions = viewModel.getAllTransitions()
+    val allSleeps = viewModel.getAllSleeps()
     SettingScreen(
         allTimeLogs,
         allLocations,
         allTransitions,
         allSleeps,
-        readLog(),
-        { viewModel.updateLocationLogs() }
-    )
+        readLog()
+    ) { viewModel.updateLocationLogs() }
 }
 
 @Composable
@@ -47,7 +43,7 @@ fun SettingScreen(
     var contentType by remember{ mutableStateOf(0) }
     var dataType by remember{ mutableStateOf(0) }
 
-    Column() {
+    Column {
         SubscribeATSwitch(updateLocationLogs)
         SubscribeSleepSwitch()
         when (dataType) {
@@ -70,9 +66,9 @@ fun SettingScreen(
                     .weight(1f)
                     .horizontalScroll(scrollState), content = {
                     items(allTransitions.reversed()){ item ->
-                        Column(){
+                        Column {
                             Text(text = "${item.id} ${item.activityType} ${item.transitionType}")
-                            Text(text = "   ${item.dateTime}")
+                            Text(text = "   ${item.dateTime.toLocalDateTime()}")
                             Text(text = "   ${item.latitude} ${item.longitude}")
                         }
                     }
@@ -86,7 +82,7 @@ fun SettingScreen(
                     items(allSleep.reversed()){ item ->
                         Column(){
                             Text(text = "${item.id} ${item.confidence} ${item.brightness} ${item.motion}")
-                            Text(text = "   ${item.dateTime}")
+                            Text(text = "   ${item.dateTime.toLocalDateTime()}")
                         }
                     }
                 })
@@ -108,7 +104,7 @@ fun SettingScreen(
                 Column(){
                     Text(text = "${item.id} ${item.contentType}")
                     Text(text = "   ${item.timeContent}")
-                    Text(text = "   ${item.fromDateTime} ${item.untilDateTime}")
+                    Text(text = "   ${item.fromDateTime.toLocalDateTime()} ${item.untilDateTime.toLocalDateTime()}")
                 }
             }
         })
