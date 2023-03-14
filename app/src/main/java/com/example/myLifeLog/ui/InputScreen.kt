@@ -39,7 +39,7 @@ fun InputScreenSetup(
     contentTabSelected: Int
 ) {
     val navToSummary = {
-        navController.navigate("${DESTINATIONS.SUMMARY.str}/$periodTabSelected,$contentTabSelected")
+        navController.navigate("${DESTINATIONS.SUMMARY}/$periodTabSelected,$contentTabSelected")
     }
 
     val backHandlingEnabled by remember { mutableStateOf(true) }

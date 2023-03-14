@@ -7,12 +7,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myLifeLog.MainViewModel
+import com.example.myLifeLog.myLog
 
-enum class DESTINATIONS(val str: String) {
-    SUMMARY("summary"),
-    INPUT("input"),
-    SETTING("setting"),
-    NAME("name")
+enum class DESTINATIONS() {
+    SUMMARY(),
+    INPUT(),
+    SETTING(),
+    NAME()
 }
 
 @Composable
@@ -20,14 +21,14 @@ fun MyNavHost(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    startDestination: String = "${DESTINATIONS.SUMMARY.str}/{args}"
+    startDestination: String = "${DESTINATIONS.SUMMARY}/{args}"
 ) {
     NavHost(
         modifier = modifier,
         navController = navController,
         startDestination = startDestination
     ) {
-        composable("${DESTINATIONS.INPUT.str}/{args}") { backStackEntry ->
+        composable("${DESTINATIONS.INPUT}/{args}") { backStackEntry ->
             val args = backStackEntry.arguments!!.getString("args")!!.split(",")
             InputScreenSetup(
                 viewModel = viewModel,
@@ -36,8 +37,9 @@ fun MyNavHost(
                 contentTabSelected = args[1].toInt()
             )
         }
-        composable("${DESTINATIONS.SUMMARY.str}/{args}") { backStackEntry ->
+        composable("${DESTINATIONS.SUMMARY}/{args}") { backStackEntry ->
             if (backStackEntry.arguments?.getString("args") != null) {
+                myLog("backstack", "not null")
                 val args = backStackEntry.arguments!!.getString("args")!!.split(",")
                 SummaryScreenSetup(
                     viewModel = viewModel,
@@ -46,13 +48,14 @@ fun MyNavHost(
                     contentType0 = args[1].toInt()
                 )
             } else {
+                myLog("backstack", "null")
                 SummaryScreenSetup(
                     viewModel = viewModel,
                     navController = navController
                 )
             }
         }
-        composable(DESTINATIONS.SETTING.str) {
+        composable("${DESTINATIONS.SETTING}") {
             SettingScreenSetup(
                 viewModel = viewModel
             )

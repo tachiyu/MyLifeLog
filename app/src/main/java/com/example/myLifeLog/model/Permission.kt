@@ -2,21 +2,14 @@ package com.example.myLifeLog.model
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.AppOpsManager
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
-import android.provider.Settings
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.myLifeLog.R
-
-const val TAG = "Permission"
 
 fun checkLocationPermission(context: Context): Boolean =
     if (Build.VERSION.SDK_INT >= 29) {
@@ -63,32 +56,18 @@ fun checkUsageStatsPermission(context: Context): Boolean {
 
 fun requestActivityPermission(context: Context) {
     if (!checkActivityPermission(context)) {
+        val permissions = if (Build.VERSION.SDK_INT >= 29) {
+            arrayOf(Manifest.permission.ACTIVITY_RECOGNITION)
+        } else {
+            arrayOf("com.google.android.gms.permission.ACTIVITY_RECOGNITION")
+        }
         ActivityCompat.requestPermissions(
             context as Activity,
-            arrayOf("com.google.android.gms.permission.ACTIVITY_RECOGNITION"),
+            permissions,
             0
         )
     }
 }
-
-fun requestLocationPermission(context: Context) {
-    if (!checkLocationPermission(context)) {
-        if (Build.VERSION.SDK_INT >= 29) {
-            ActivityCompat.requestPermissions(
-                context as Activity,
-                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                0
-            )
-        } else {
-            ActivityCompat.requestPermissions(
-                context as Activity,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                0
-            )
-        }
-    }
-}
-
 fun requestActivityAndLocationPermission(context: Context) {
     if (checkActivityPermission(context) && checkLocationPermission(context)) {
         return
@@ -121,29 +100,5 @@ fun requestActivityAndLocationPermission(context: Context) {
             permissions,
             0
         )
-    }
-}
-
-fun requestUsageStatsPermission(context: Context) {
-    val permissions = arrayOf(Manifest.permission.PACKAGE_USAGE_STATS)
-    if (!checkUsageStatsPermission(context)) {
-        Log.v("Permission", "Have no permission: ${permissions.joinToString()}")
-        AlertDialog.Builder(context)
-            .setTitle("使用状況へのアクセス")
-            .setMessage(context.getString(R.string.request_usage_stats_permission_rational))
-            .setPositiveButton(
-                "設定"
-            ) { _, _ ->
-                ContextCompat.startActivity(
-                    context,
-                    Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS),
-                    null
-                )
-            }
-            .setNegativeButton(
-                "キャンセル"
-            ) { dialogInterface, _ -> dialogInterface.dismiss() }
-            .setCancelable(true)
-            .show()
     }
 }

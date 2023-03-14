@@ -19,6 +19,8 @@
     <string name="null_location">不明な場所</string>
     <string name="input_others_log_recommendation">その他の時間ログも残してみましょう！</string>
     <string name="input_others">入力する</string>
+    <string name="set_permission">設定へ</string>
+    <string name="reload_permission">再読み込み</string>
     <string name="input_example">例: 朝ごはん、お風呂</string>
     <string name="location_name_example">例: 自宅、会社</string>
     <string name="request_activity_recognition_permission_rational">睡眠情報の自動記録に「身体情報へのアクセス権限」が必要です。

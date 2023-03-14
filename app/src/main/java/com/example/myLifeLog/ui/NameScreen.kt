@@ -36,7 +36,7 @@ fun NameScreen(
         position = CameraPosition.fromLatLngZoom(loc, 15f)
     }
     val navToSummary = {
-        navController.navigate("${DESTINATIONS.SUMMARY.str}/$period,$contentType")
+        navController.navigate("${DESTINATIONS.SUMMARY}/$period,$contentType")
     }
     val backHandlingEnabled by remember { mutableStateOf(true) }
     BackHandler(backHandlingEnabled) {

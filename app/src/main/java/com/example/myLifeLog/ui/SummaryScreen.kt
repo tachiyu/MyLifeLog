@@ -1,6 +1,8 @@
 package com.example.myLifeLog.ui
 
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,9 +24,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.example.myLifeLog.*
 import com.example.myLifeLog.R
+import com.example.myLifeLog.model.*
 import com.example.myLifeLog.model.db.location.Location
 import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -78,8 +82,8 @@ fun SummaryScreenSetup(
         SummaryScreen(
             findTimeLogs = findTimeLogs,
             updateAll = { viewModel.updateAll() },
-            navToInput = { navController.navigate("${DESTINATIONS.INPUT.str}/$period,$contentType") },
-            navToSetting = { navController.navigate(DESTINATIONS.SETTING.str) },
+            navToInput = { navController.navigate("${DESTINATIONS.INPUT}/$period,$contentType") },
+            navToSetting = { navController.navigate("${DESTINATIONS.SETTING}") },
             period = period,
             onPTabChange = {period2 -> period = period2},
             contentType = contentType,
@@ -154,7 +158,8 @@ fun SummaryScreen(
                 firstDate = firstDate,
                 findTimeLogs = findTimeLogs,
                 contentType = contentType,
-                recomposeVal = recomposeVal
+                recomposeVal = recomposeVal,
+                updateAll = updateAll
             )
             Period.WEEK -> WeekPage(
                 modifier = Modifier.weight(2f),
@@ -162,7 +167,8 @@ fun SummaryScreen(
                 firstDate = firstDate,
                 findTimeLogs = findTimeLogs,
                 contentType = contentType,
-                recomposeVal = recomposeVal
+                recomposeVal = recomposeVal,
+                updateAll = updateAll
             )
             Period.DAY -> DayPage(
                 modifier = Modifier.weight(2f),
@@ -170,7 +176,8 @@ fun SummaryScreen(
                 firstDate = firstDate,
                 findTimeLogs = findTimeLogs,
                 contentType = contentType,
-                recomposeVal = recomposeVal
+                recomposeVal = recomposeVal,
+                updateAll = updateAll
             )
         }
 
@@ -199,7 +206,8 @@ fun DayPage(
     firstDate: LocalDate,
     findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
-    recomposeVal: Int
+    recomposeVal: Int,
+    updateAll: () -> Unit
 ) {
     val heightAlpha = 2f
 
@@ -226,7 +234,8 @@ fun DayPage(
         calcTimeIndices = calcTimeIndices,
         findTimeLogs = findTimeLogs,
         contentType = contentType,
-        recomposeVal = recomposeVal
+        recomposeVal = recomposeVal,
+        updateAll = updateAll
     )
 }
 
@@ -237,7 +246,8 @@ fun WeekPage(
     firstDate: LocalDate,
     findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
-    recomposeVal: Int
+    recomposeVal: Int,
+    updateAll: () -> Unit
 ) {
     val heightAlpha = 2f/6f
 
@@ -276,7 +286,8 @@ fun WeekPage(
         calcTimeIndices = calcTimeIndices,
         findTimeLogs = findTimeLogs,
         contentType = contentType,
-        recomposeVal = recomposeVal
+        recomposeVal = recomposeVal,
+        updateAll = updateAll
     )
 }
 
@@ -287,7 +298,8 @@ fun MonthPage(
     firstDate: LocalDate,
     findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
-    recomposeVal: Int
+    recomposeVal: Int,
+    updateAll: () -> Unit
 ) {
     val heightAlpha = 2f/24f
 
@@ -323,7 +335,8 @@ fun MonthPage(
         calcTimeIndices = calcTimeIndices,
         findTimeLogs = findTimeLogs,
         contentType = contentType,
-        recomposeVal = recomposeVal
+        recomposeVal = recomposeVal,
+        updateAll = updateAll
     )
 }
 
@@ -338,8 +351,11 @@ fun SummaryContent(modifier: Modifier,
                    calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>,
                    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
                    contentType: Int,
-                   recomposeVal: Int
+                   recomposeVal: Int,
+                   updateAll: () -> Unit
 ) {
+    val context = LocalContext.current
+    var recomposeVal2 by remember{ mutableStateOf(0) }
     val pagerState = rememberPagerState(initialPage = 0)
     val coroutineScope = rememberCoroutineScope()
 
@@ -373,7 +389,7 @@ fun SummaryContent(modifier: Modifier,
         var appNameSelected: String by remember{ mutableStateOf("") }
 
         // コンポーザブル
-        Column {
+        Column() {
             //日付を選択するドロップダウンリスト
             DateSelectionDropDown(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -397,7 +413,7 @@ fun SummaryContent(modifier: Modifier,
                         TimeLogLine(timeLog = item, heightAlpha = heightAlpha,
                             isPackageNameSelected = appNameSelected == item.timeContent,
                             onClick = {
-                                appNameSelected = item.timeContent
+                                appNameSelected = if (appNameSelected != item.timeContent) item.timeContent else ""
                                 coroutineScope.launch {
                                     timeLogSummaryState.scrollToItem(
                                         timeLogSummaryList.indexOfFirst { it.timeContent == item.timeContent }
@@ -417,6 +433,62 @@ fun SummaryContent(modifier: Modifier,
                     modifier = Modifier.align(Alignment.CenterEnd),
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(max(page-1, 0)) } }
                 )
+
+                // Permissionが取れてない時に、警告するポップアップ
+                myLog("permission", "recomposed! $recomposeVal2")
+                when (contentType) {
+                    ContentType.APP ->
+                        if (!checkUsageStatsPermission(context)) {
+                            RequirePermissionComposable(
+                                text = "「アプリ」ログを取得するには端末の「使用状況へのアクセス」を許可する必要があります。\n" +
+                                        "個人情報が外部に発信されることはありません。",
+                                onClick = {
+                                    ContextCompat.startActivity(
+                                        context,
+                                        Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS),
+                                        null
+                                    )
+                                },
+                                onClick2 = {
+                                    if (checkUsageStatsPermission(context)) {
+                                        updateAll()
+                                        recomposeVal2++
+                                    }
+                                }
+                            )
+                        }
+                    ContentType.LOCATION ->
+                        if (!(checkLocationPermission(context) && checkActivityPermission(context))) {
+                            RequirePermissionComposable(
+                                text = "「場所」ログを取得するには端末の「身体データへのアクセス」,「位置情報へのアクセス」を許可する必要があります。\n" +
+                                        "各設定のそれぞれ一番上の権限を許可してください。\n" +
+                                        "個人情報が外部に発信されることはありません。" ,
+                                onClick = { requestActivityAndLocationPermission(context) },
+                                onClick2 = {
+                                    if (checkLocationPermission(context) && checkActivityPermission(context)) {
+                                        subscribeAT(context)
+                                        updateAll()
+                                        recomposeVal2++
+                                    }
+                                }
+                            )
+                        }
+                    ContentType.SLEEP ->
+                        if (!checkActivityPermission(context)) {
+                            RequirePermissionComposable(
+                                text = "「睡眠」ログを取得するには端末の「身体データへのアクセス」を許可する必要があります。\n" +
+                                        "個人情報が外部に発信されることはありません。",
+                                onClick = { requestActivityPermission(context) },
+                                onClick2 = {
+                                    if (checkActivityPermission(context)) {
+                                        subscribeSleep(context)
+                                        updateAll()
+                                        recomposeVal2++
+                                    }
+                                }
+                            )
+                        }
+                }
             }
 
 
@@ -512,6 +584,45 @@ fun ClickableSpace(
 
     }
 }
+
+@Composable
+fun RequirePermissionComposable(
+    modifier: Modifier = Modifier,
+    text: String,
+    onClick: () -> Unit,
+    onClick2: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .background(Color.Gray)
+            .fillMaxWidth()
+            .fillMaxHeight()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.warning),
+            contentDescription = "",
+            modifier = Modifier.size(50.dp, 50.dp)
+        )
+        Text(text = text)
+        Row() {
+            TextButton(
+                modifier = Modifier
+                    .padding(20.dp),
+                onClick = onClick
+            ) {
+                Text(text = stringResource(id = R.string.set_permission), color = Color.White, fontSize = 25.sp, maxLines = 1)
+            }
+            TextButton(
+                modifier = Modifier
+                    .padding(20.dp),
+                onClick = onClick2
+            ) {
+                Text(text = stringResource(id = R.string.reload_permission), color = Color.White, fontSize = 25.sp, maxLines = 1)
+            }
+        }
+    }
+}
+
 
 @Composable
 fun DateSelectionDropDown(

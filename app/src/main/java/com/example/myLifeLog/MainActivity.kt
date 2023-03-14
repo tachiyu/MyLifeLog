@@ -18,8 +18,6 @@ import com.example.myLifeLog.model.apimanager.ActivityTransitionManager
 import com.example.myLifeLog.model.apimanager.SleepManager
 import com.example.myLifeLog.model.checkActivityPermission
 import com.example.myLifeLog.model.checkLocationPermission
-import com.example.myLifeLog.model.requestActivityAndLocationPermission
-import com.example.myLifeLog.model.requestUsageStatsPermission
 import com.example.myLifeLog.ui.theme.MylifelogTheme
 
 class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -27,8 +25,6 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // パーミッションの確認・パーミッションが無ければユーザーに許可を求める
-        requestActivityAndLocationPermission(this)
-        requestUsageStatsPermission(this)
 
         setContent {
             MylifelogTheme {
