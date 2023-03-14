@@ -467,6 +467,7 @@ fun SummaryContent(modifier: Modifier,
                                 onClick2 = {
                                     if (checkLocationPermission(context) && checkActivityPermission(context)) {
                                         subscribeAT(context)
+                                        subscribeSleep(context)
                                         updateAll()
                                         recomposeVal2++
                                     }
