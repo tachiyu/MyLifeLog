@@ -118,14 +118,14 @@ class MainViewModel(private val application: Application) : ViewModel() {
         while (usageEvents.hasNextEvent()) {
             val event: UsageEvents.Event = UsageEvents.Event()
             usageEvents.getNextEvent(event)
-            // もしAppLogがupdateされたのが初めて（lastAppUpdatedTime==0）なら
+            // もしAppLogがupdateされたのが初めて（firstAppLogTime==0）なら
             // 最初のAppLogの日付をfirstDateとして保存しておく（日付のドロップダウンリストなどに使用する)
-            if (isFirst && lastAppUpdatedTime == 0L) {
+            if (isFirst && loadSharedPrefLong(application.applicationContext, "firstAppLogTime") == 0L) {
                 saveSharedPref(application.applicationContext, "firstAppLogTime", event.timeStamp)
                 isFirst = false
             }
 
-            if ("launcher" !in event.packageName) {
+            if ("launcher" !in event.packageName && event.packageName != application.packageName) { //launcherやこのアプリ自身はアプリログに含めない
                 if (event.eventType== UsageEvents.Event.ACTIVITY_RESUMED) {
                     if (isForeground) {
                         if (timeContent != event.packageName) {
@@ -185,7 +185,7 @@ class MainViewModel(private val application: Application) : ViewModel() {
     fun updateLocationLogs(){
         val tag = "updateLocationLogs"
         val context = application.applicationContext
-        myLog(tag, "updateLocationLogs called")
+        myLog(tag, "updateLocationLogs called!")
 
         if (loadSharedPrefBool(context, "IsActivityRecognitionSubscribed")) {
             val lastUpdateTime: Long

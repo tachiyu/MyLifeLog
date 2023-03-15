@@ -263,3 +263,10 @@ fun doSomethingWithLocation(context: Context,
         return
     }
 }
+
+fun makeFirstLocationLog(
+    context: Context,
+    locationClient: FusedLocationProviderClient,
+) {
+
+}

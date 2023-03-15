@@ -3,6 +3,7 @@ package com.example.myLifeLog.ui
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -108,6 +109,7 @@ fun SummaryScreen(
     val firstDate = loadSharedPrefLong(LocalContext.current, "firstAppLogTime").let {
         if (it == 0L) LocalDate.now() else it.toLocalDateTime().toLocalDate()
     }
+    Log.d("summary", "$firstDate")
     val lastDate = LocalDate.now(ZoneId.systemDefault()) //現在の日付
     var cnt by remember { mutableStateOf(0) }
 

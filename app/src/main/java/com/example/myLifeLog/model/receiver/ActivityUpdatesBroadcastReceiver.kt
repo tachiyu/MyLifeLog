@@ -34,7 +34,7 @@ class ActivityUpdatesBroadcastReceiver: BroadcastReceiver() {
                     event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER
                 ) {
                     doSomethingWithLocation(
-                        context, locationClient,1, 10,
+                        context, locationClient,1, 5,
                         onSuccess = { location ->
                             transitionRepository.insertTransition(
                                 Transition(
