@@ -1,19 +1,11 @@
 package com.example.myLifeLog
 
-import android.annotation.SuppressLint
+import android.app.usage.UsageEvents
 import android.content.Context
 import android.util.Log
 import androidx.compose.ui.graphics.Color
-import com.example.myLifeLog.model.apimanager.ActivityTransitionManager
-import com.example.myLifeLog.model.apimanager.SleepManager
-import com.example.myLifeLog.model.checkLocationPermission
 import com.google.android.gms.common.wrappers.Wrappers.packageManager
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationToken
-import com.google.android.gms.tasks.CancellationTokenSource
-import com.google.android.gms.tasks.OnTokenCanceledListener
+import com.google.android.gms.location.*
 import java.io.*
 import java.time.Instant
 import java.time.LocalDate
@@ -65,208 +57,241 @@ fun LocalDate.toYMDE(): String {
     return this.format(DateTimeFormatter.ofPattern("yyyy年 MM月 dd日 (E)", Locale.JAPANESE))
 }
 
-fun saveSharedPref(context: Context, key: String, bool: Boolean) {
-    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    val sharedPrefEditor = sharedPref.edit()
-    sharedPrefEditor.putBoolean(key, bool).apply()
-}
-
 fun saveSharedPref(context: Context, key: String, long: Long) {
     val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
     val sharedPrefEditor = sharedPref.edit()
     sharedPrefEditor.putLong(key, long).apply()
 }
 
-fun saveSharedPref(context: Context, key: String, str: String) {
+fun loadSharedPrefLong(context: Context, key: String, defValue: Long = 0L): Long {
     val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    val sharedPrefEditor = sharedPref.edit()
-    sharedPrefEditor.putString(key, str).apply()
+    return sharedPref.getLong(key, defValue)
 }
 
-fun saveSharedPref(context: Context, key: String, int: Int) {
-    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    val sharedPrefEditor = sharedPref.edit()
-    sharedPrefEditor.putInt(key, int).apply()
-}
-
-fun loadSharedPrefBool(context: Context, key: String): Boolean {
-    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    return sharedPref.getBoolean(key, false)
-}
-
-fun loadSharedPrefLong(context: Context, key: String): Long {
-    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    return sharedPref.getLong(key, 0L)
-}
-
-fun loadSharedPrefStr(context: Context, key: String): String? {
-    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    return sharedPref.getString(key, "")
-}
-
-fun loadSharedPrefInt(context: Context, key: String): Int {
-    val sharedPref = context.getSharedPreferences("AppSharedPref", Context.MODE_PRIVATE)
-    return sharedPref.getInt(key, 0)
-}
-
-data class LocContent(
-    val activityType: Int,
-    val locId: Int?,
-    val lat: Double?,
-    val lon: Double?
-)
-
-fun String.toLocContent(): LocContent{
-    return this.split(",").let{
-        LocContent(it[0].toInt(), it[1].toIntOrNull(), it[2].toDoubleOrNull(), it[3].toDoubleOrNull())
-    }
-}
-
-fun subscribeAT(context: Context){
-    val key = "IsActivityRecognitionSubscribed"
-    val activityTransitionManager = ActivityTransitionManager.getInstance(context)
-    val locationClient = LocationServices.getFusedLocationProviderClient(context)
-    if (!loadSharedPrefBool(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
-//     ・ActivityRecognitionTransitionAPIにサブスクライブ
-//     ・Settings：IsActivityRecognitionSubscribedをtrueに
-//     ・lastLocation・lastUpdateTimeを更新
-        myLog("", "subscribe to ActivityRecognition")
-        activityTransitionManager.startActivityUpdate()
-        saveSharedPref(context, key=key, bool=true)
-        saveSharedPref(context, "lastLocationUpdatedTime", LocalDateTime.now().toMilliSec())
-        doSomethingWithLocation(
-            context, locationClient, 1, 5,
-            onSuccess = {location ->
-                saveSharedPref(
-                    context,
-                    "lastLocation",
-                    "3,,${location.latitude},${location.longitude}"
-                )
-            },
-            onFailure = {
-                saveSharedPref(
-                    context,
-                    "lastLocation",
-                    "3,,null,null"
-                )
-            }
-        )
-    }
-}
-
-fun stopSubscribeAT(context: Context, updateLocationLogs: () -> Unit){
-    val key = "IsActivityRecognitionSubscribed"
-    val activityTransitionManager = ActivityTransitionManager.getInstance(context)
-    if (loadSharedPrefBool(context, key=key)) {
-//     ・ActivityRecognitionTransitionAPIのサブスクライブを解除
-//     ・Settings：IsActivityRecognitionSubscribedをfalseに
-//     ・updateLocationLogを実行
-        activityTransitionManager.stopActivityUpdate()
-        saveSharedPref(context, key=key, bool=false)
-        updateLocationLogs()
-    }
-}
-
-fun subscribeSleep(context: Context){
-    val isSleepSubscribed = "IsSleepDetectionSubscribed"
-    val sleepManager = SleepManager.getInstance(context)
-    if (!loadSharedPrefBool(context, key=isSleepSubscribed)) { /*すでにサブスクライブされてるかチェック*/
-        myLog("subscribeSleep", "subscribe to ActivityRecognition")
-//     ・SleepAPIにサブスクライブ
-//     ・Settings：IsSleepDetectionSubscribedをtrueに
-//     ・lastSleep・lastUpdateTimeを更新
-        sleepManager.startSleepUpdate()
-        saveSharedPref(context, key=isSleepSubscribed, bool=true)
-        saveSharedPref(context, "lastSleepUpdatedTime", LocalDateTime.now().toMilliSec())
-        saveSharedPref(context, "lastSleepState","awake")
-    }
-}
-
-fun stopSubscribeSleep(context: Context){
-    val key = "IsSleepDetectionSubscribed"
-    val sleepManager = SleepManager.getInstance(context)
-    if (loadSharedPrefBool(context, key=key)) { /*すでにサブスクライブされてるかチェック*/
-        sleepManager.stopSleepUpdate()
-        saveSharedPref(context, key=key, bool=false)
-    }
-}
-
-fun logToLocal(tag: String, msg: String, time: LocalDateTime) {
+fun logToLocal(tag: String, msg: String, time: LocalDateTime, context: Context) {
     val str = "${time.toString()}/ $tag/ $msg"
-    val d = File("/data/data/com.example.myLifeLog/files")
+    val d = File(context.filesDir.path)
     if (!d.exists()) { d.mkdirs() }
-    val f = File("/data/data/com.example.myLifeLog/files/log.txt")
+    val f = File("${context.filesDir.path}/log.txt")
     val bw = BufferedWriter(FileWriter(f, true))
     bw.append(str)
     bw.newLine()
     bw.close()
 }
 
-fun myLog(tag: String, msg: String) {
+fun myLog(tag: String, msg: String, context: Context) {
     Log.d(tag, msg)
-    logToLocal(tag, msg, LocalDateTime.now())
+    logToLocal(tag, msg, LocalDateTime.now(), context)
 }
 
-fun readLog(): List<String> {
-    val br = BufferedReader(FileReader(File("/data/data/com.example.myLifeLog/files/log.txt")))
+fun readLog(context: Context): List<String> {
+    val br = BufferedReader(FileReader(File("${context.filesDir.path}/log.txt")))
     val lines =  br.readLines()
     br.close()
     return lines
 }
 
-@SuppressLint("MissingPermission")
-fun doSomethingWithLocation(context: Context,
-                            locationClient: FusedLocationProviderClient,
-                            cnt: Int, //この関数の試行回数
-                            maxCnt: Int, //cntがこの値を超えると、試行をあきらめる
-                            onSuccess: (android.location.Location) -> Unit,
-                            onFailure: () -> Unit ){
-    val tag = "doSomethingWithLocation"
-    // check permission
-    if (checkLocationPermission(context)) {
-        myLog(tag, "try to get location (${cnt}th time")
-        locationClient.getCurrentLocation(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            object : CancellationToken() {
-                override fun onCanceledRequested(p0: OnTokenCanceledListener) =
-                    CancellationTokenSource().token
-                override fun isCancellationRequested() = false
-            }
-        ).addOnSuccessListener { location ->
-            if (location != null) {
-                myLog(tag, "get location: ${location.latitude} ${location.longitude}")
-                onSuccess(location)
-            } else {
-                myLog(tag, "get null location")
-                // cnt が maxCntを超えていなければ、再帰的に再試行。
-                if (cnt < maxCnt) {
-                    doSomethingWithLocation(
-                        context, locationClient, cnt+1, maxCnt, onSuccess, onFailure
-                    )
-                } else {
-                    onFailure()
-                }
-            }
-        }.addOnFailureListener {
-            myLog(tag, "can not get location")
-            // cnt が maxCntを超えていなければ、再帰的に再試行。
-            if (cnt < maxCnt) {
-                doSomethingWithLocation(
-                    context, locationClient, cnt+1, maxCnt, onSuccess, onFailure
-                )
-            } else {
-                onFailure()
-            }
-        }
-    } else {
-        myLog(tag, "permission denied (either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION is required)")
-        return
+data class ParsedTimeContent(
+    val activityType: Int,
+    val locationId: Int?
+)
+
+fun parseTimeContent(timeContent: String): ParsedTimeContent {
+    return timeContent.split(",").let {
+        ParsedTimeContent(it[0].toInt(), it[1].toIntOrNull())
     }
 }
 
-fun makeFirstLocationLog(
-    context: Context,
-    locationClient: FusedLocationProviderClient,
-) {
-
+fun timeContent(activityType: Int, locationId: Int?): String {
+    return "$activityType,$locationId"
 }
+
+
+// AppLogのリストをTimeLogのリストに変換
+@JvmName("toTimeLogListAppLog")
+fun List<App>.toTimeLogList(from: Long, until: Long): List<TimeLog> {
+    val timeLogs = mutableListOf<TimeLog>()
+    var tmpFromDateTime = from
+    this.forEachIndexed { index, appLog ->
+        when (appLog.eventType) {
+            UsageEvents.Event.ACTIVITY_RESUMED -> {
+                tmpFromDateTime = appLog.timeStamp
+                if (index == this.lastIndex) {
+                    timeLogs.add(
+                        TimeLog(
+                            timeContent = appLog.packageName,
+                            fromDateTime = tmpFromDateTime,
+                            untilDateTime = until
+                        )
+                    )
+                }
+            }
+            UsageEvents.Event.ACTIVITY_PAUSED -> {
+                timeLogs.add(
+                    TimeLog(
+                        timeContent = appLog.packageName,
+                        fromDateTime = tmpFromDateTime,
+                        untilDateTime = appLog.timeStamp
+                    )
+                )
+            }
+        }
+    }
+    return timeLogs
+}
+
+// TransitionのリストをTimeLogのリストに変換
+fun List<Transition>.toTimeLogList(from: Long, until: Long): List<TimeLog> {
+    val timeLogs = mutableListOf<TimeLog>()
+
+    var currentFrom: Long? = null
+    var currentActivity: Int? = null
+    var currentTimeContent: String? = null
+    var currentTransition: Int? = null
+
+    for (i in this.indices) {
+        // 現在のデータの状態と時刻を取得
+        val transition = this[i]
+        val transitionType = transition.transitionType
+        val activityType = transition.activityType
+        val locationId = transition.locationId
+        val timePoint = transition.dateTime
+
+        when (transitionType) {
+            ActivityTransition.ACTIVITY_TRANSITION_ENTER -> {
+                if (!(currentActivity == activityType && currentTransition == ActivityTransition.ACTIVITY_TRANSITION_ENTER)) {
+                    currentTimeContent = timeContent(activityType, locationId)
+                    currentFrom = maxOf(timePoint, from)
+                }
+                if (i == this.lastIndex) {
+                    if (currentTimeContent != null && currentFrom != null) {
+                        timeLogs.add(
+                            TimeLog(
+                                timeContent = currentTimeContent,
+                                fromDateTime = currentFrom,
+                                untilDateTime = until
+                            )
+                        )
+                    }
+                }
+            }
+
+            ActivityTransition.ACTIVITY_TRANSITION_EXIT ->
+                if (currentActivity == activityType && timePoint >= from && i != 0) {
+                    if (currentTimeContent != null && currentFrom != null) {
+                        timeLogs.add(
+                            TimeLog(
+                                timeContent = currentTimeContent,
+                                fromDateTime = currentFrom,
+                                untilDateTime = minOf(timePoint, until)
+                            )
+                        )
+                    }
+                }
+        }
+
+        if (timePoint > until) {
+            break
+        }
+
+        currentActivity = activityType
+        currentTransition = transitionType
+    }
+    return timeLogs
+}
+
+@JvmName("toTimeLogListSleep")
+fun List<Sleep>.toTimeLogList(from: Long, until: Long): List<TimeLog> {
+    // TimeLogのリストを作成
+    val timeLogList = mutableListOf<TimeLog>()
+
+    // 睡眠状態を分類する関数
+    val classifyState = { confidence: Int ->
+        if (confidence > 70) SleepState.SLEEP
+        else if (confidence < 30) SleepState.AWAKE
+        else SleepState.UNKNOWN
+    }
+
+    // 現在の睡眠状態と開始時刻を初期化
+    var currentSleepState: Int? = null
+    var currentFrom: Long? = null
+
+    // Sleepデータをループで処理
+    for (i in this.indices) {
+        // 現在のデータの睡眠状態と時刻を取得
+        val sleepState = classifyState(this[i].confidence)
+        val timePoint = this[i].dateTime
+
+        // indexが０の時、sleepState, currentFromを初期化する。
+        if (i == 0) {
+            currentSleepState = sleepState
+            currentFrom = maxOf(from, timePoint)
+        }
+
+        // 指定範囲より前のデータ
+        if (timePoint < from) {
+            currentSleepState = sleepState
+            continue
+        }
+
+        // 睡眠状態が変わった場合、新しいTimeLogをリストに追加
+        if (sleepState != currentSleepState) {
+            timeLogList.add(
+                TimeLog(
+                    timeContent = currentSleepState.toString(),
+                    fromDateTime = currentFrom!!,
+                    untilDateTime = minOf(timePoint, until)
+                )
+            )
+            currentFrom = timePoint
+        }
+
+        // 現在の睡眠状態を更新
+        currentSleepState = sleepState
+
+        // 最後のデータ、または指定範囲を超えた場合、最後のTimeLogをリストに追加
+        if (i == this.lastIndex && timePoint < until) {
+            timeLogList.add(
+                TimeLog(
+                    timeContent = currentSleepState.toString(),
+                    fromDateTime = currentFrom!!,
+                    untilDateTime = until
+                )
+            )
+        }
+
+        // 指定範囲を超えた場合、ループを終了
+        if (timePoint >= until) {
+            break
+        }
+    }
+
+    // TimeLogのリストを返す
+    return timeLogList
+}
+
+@JvmName("toTimeLogListOthers")
+fun List<Others>.toTimeLogList(from: Long, until: Long): List<TimeLog> {
+    val timeLogList = mutableListOf<TimeLog>()
+    for (i in this.indices) {
+        val log = this[i]
+        if (log.untilDateTime < from || log.fromDateTime > until) {
+            continue
+        }
+
+        val fromDateTime = maxOf(from, log.fromDateTime)
+        val untilDateTime = minOf(until, log.untilDateTime)
+
+        timeLogList.add(
+            TimeLog(
+                timeContent =  log.timeContent,
+                fromDateTime = fromDateTime,
+                untilDateTime = untilDateTime
+            )
+        )
+    }
+    return timeLogList
+}
+
+
+

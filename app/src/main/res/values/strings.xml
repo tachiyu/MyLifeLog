@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">かんたんライフログ</string>
+    <string name="app_name">LifeLog</string>
     <string name="location">場所</string>
     <string name="app">アプリ</string>
     <string name="sleep">睡眠</string>
@@ -19,16 +19,20 @@
     <string name="null_location">不明な場所</string>
     <string name="input_others_log_recommendation">その他の時間ログも残してみましょう！</string>
     <string name="input_others">入力する</string>
-    <string name="set_permission">設定へ</string>
-    <string name="reload_permission">再読み込み</string>
     <string name="input_example">例: 朝ごはん、お風呂</string>
     <string name="location_name_example">例: 自宅、会社</string>
-    <string name="request_activity_recognition_permission_rational">睡眠情報の自動記録に「身体情報へのアクセス権限」が必要です。
-        取得されたデータはこのアプリ内でのみ使用され、外部に送信されることはありません。</string>
-    <string name="request_background_location_permission_rational">場所情報の自動記録に「場所情報へのアクセス」が必要です。
-        取得されたデータはこのアプリ内でのみ使用され、外部に送信されることはありません。</string>
-    <string name="request_usage_stats_permission_rational">スマホ使用状況の自動記録に「使用状況へのアクセス」が必要です。
-        取得されたデータはこのアプリ内でのみ使用され、外部に送信されることはありません。</string>
+    <string name="request_permission_about_location">LifeLogアプリでは、場所ログを取得するために、「身体データへのアクセス」と「位置情報へのアクセス」の許可が必要です。\n
+        位置情報では設定の一番上の権限を許可してください。\n
+        ご安心ください、個人情報は外部に共有されません。
+    </string>
+    <string name="request_permission_about_app">LifeLogアプリでは、アプリログを取得するために、「使用状況へのアクセス」の許可が必要です。\n
+        ご安心ください、個人情報は外部に共有されません。
+    </string>
+    <string name="request_permission_about_sleep">LifeLogアプリでは、睡眠ログを取得するために、「身体データへのアクセス」の許可が必要です。\n
+        ご安心ください、個人情報は外部に共有されません。
+    </string>
+    <string name="request_setting_button">設定をリクエストする</string>
+    <string name="confirm_request">設定を確認して次へ</string>
     <string name="incomplete_input_error">未入力の項目があります！</string>
     <string name="INPUT">入力</string>
     <string name="SUMMARY">集計</string>

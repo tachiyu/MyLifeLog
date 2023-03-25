@@ -1,15 +1,14 @@
 package com.example.myLifeLog.model.db.location
 
+import com.example.myLifeLog.Location
 import kotlinx.coroutines.*
 
 class LocationRepository(private val locationDao: LocationDao) {
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
-    fun insertLocation(location: Location) {
-        coroutineScope.launch(Dispatchers.IO) {
-            locationDao.insertLocation(location)
-        }
+    suspend fun insertLocationAndGetId(location: Location): Long {
+        return locationDao.insertLocationAndGetId(location)
     }
 
     fun getAllLocations(): List<Location> {

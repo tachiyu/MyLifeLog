@@ -14,10 +14,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
-import com.example.myLifeLog.MainViewModel
+import com.example.myLifeLog.*
 import com.example.myLifeLog.R
-import com.example.myLifeLog.model.db.timelog.TimeLog
-import com.example.myLifeLog.toMilliSec
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.MaterialDialogButtons
 import com.vanpra.composematerialdialogs.MaterialDialogScope
@@ -47,20 +45,19 @@ fun InputScreenSetup(
         navToSummary()
     }
     InputScreen(
-        insertTimeLog = { timeLog -> viewModel.insertTimeLog(timeLog) },
+        insertOthers = { othersLog: Others -> viewModel.insertOthers(othersLog) },
         navToSummary = { navToSummary() }
     )
 }
 
 @Composable
 fun InputScreen(
-    insertTimeLog: (TimeLog) -> Unit,
+    insertOthers: (Others) -> Unit,
     navToSummary: () -> Unit
 ) {
     val dialogColor = remember { Color(0xFF3700B3) }
 
     // 入力フィールドの値
-    val contentType = ContentType.OTHERS
     var timeContent: String by remember { mutableStateOf("") }
     var fromDate: LocalDate? by remember { mutableStateOf(LocalDate.now()) }
     var untilDate: LocalDate? by remember { mutableStateOf(LocalDate.now()) }
@@ -155,9 +152,8 @@ fun InputScreen(
             onClick = {
                 if (timeContent != "" && fromDate != null && fromTime != null
                     && untilDate != null && untilTime != null) {
-                    insertTimeLog(
-                        TimeLog(
-                            contentType = contentType,
+                    insertOthers(
+                        Others(
                             timeContent = timeContent,
                             fromDateTime = LocalDateTime.of(fromDate, fromTime).toMilliSec(),
                             untilDateTime = LocalDateTime.of(untilDate, untilTime).toMilliSec(),

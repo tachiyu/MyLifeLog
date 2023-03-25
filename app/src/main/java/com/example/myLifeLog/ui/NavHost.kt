@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myLifeLog.MainViewModel
-import com.example.myLifeLog.myLog
 
 enum class DESTINATIONS() {
     SUMMARY(),
@@ -39,7 +38,6 @@ fun MyNavHost(
         }
         composable("${DESTINATIONS.SUMMARY}/{args}") { backStackEntry ->
             if (backStackEntry.arguments?.getString("args") != null) {
-                myLog("backstack", "not null")
                 val args = backStackEntry.arguments!!.getString("args")!!.split(",")
                 SummaryScreenSetup(
                     viewModel = viewModel,
@@ -48,7 +46,6 @@ fun MyNavHost(
                     contentType0 = args[1].toInt()
                 )
             } else {
-                myLog("backstack", "null")
                 SummaryScreenSetup(
                     viewModel = viewModel,
                     navController = navController
@@ -56,7 +53,7 @@ fun MyNavHost(
             }
         }
         composable("${DESTINATIONS.SETTING}") {
-            SettingScreenSetup(
+            DebugScreenSetup(
                 viewModel = viewModel
             )
         }

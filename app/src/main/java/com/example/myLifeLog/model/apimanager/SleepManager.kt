@@ -25,31 +25,18 @@ class SleepManager private constructor(private val context: Context){
     }
 
     @SuppressLint("MissingPermission")
-    fun startSleepUpdate(){
-        myLog(TAG, "startSleepUpdate called")
+    fun subscribeActivity(){
         if (!checkActivityPermission(context)) {
-            myLog(TAG, "permission denied: ACTIVITY_RECOGNITION")
+            myLog(TAG, "permission denied: ACTIVITY_RECOGNITION", context)
             return
         } else{
             activityRecognitionClient.requestSleepSegmentUpdates(
                 sleepUpdatePendingIntent,
                 SleepSegmentRequest(SleepSegmentRequest.CLASSIFY_EVENTS_ONLY)
             ).also {
-                it.addOnSuccessListener { myLog(TAG, "subscribe to sleep detection") }
-                it.addOnFailureListener { myLog(TAG, "can not subscribe to sleep detection") }
+                it.addOnSuccessListener { myLog(TAG, "subscribe to sleep detection", context) }
+                it.addOnFailureListener { myLog(TAG, "can not subscribe to sleep detection", context) }
             }
-        }
-    }
-
-    fun stopSleepUpdate() {
-        myLog(TAG, "stopSleepUpdate called")
-        if (!checkActivityPermission(context)) {
-            myLog(TAG, "permission denied: ACTIVITY_RECOGNITION")
-            return
-        }
-        activityRecognitionClient.removeSleepSegmentUpdates(sleepUpdatePendingIntent).also{
-            it.addOnSuccessListener { myLog(TAG, "stop subscribe to sleep detection") }
-            it.addOnFailureListener { myLog(TAG, "can not stop subscribe to sleep detection") }
         }
     }
 

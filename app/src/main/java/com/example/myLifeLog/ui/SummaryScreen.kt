@@ -28,10 +28,9 @@ import androidx.compose.ui.window.Popup
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.example.myLifeLog.*
+import com.example.myLifeLog.Period
 import com.example.myLifeLog.R
 import com.example.myLifeLog.model.*
-import com.example.myLifeLog.model.db.location.Location
-import com.example.myLifeLog.model.db.timelog.TimeLog
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
@@ -50,10 +49,11 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
 
-data class Args(
+class Args(
     val getLocationById: (Int) -> Location?,
-    val nameLocation: (Location) -> Unit,
-    val navToName: (Int, Double, Double) -> Unit
+    val navToName: (Int, Double, Double) -> Unit,
+    val subscribeActivity: () -> Unit,
+    val subscribeSleep: () -> Unit
 )
 val LocalArgs = compositionLocalOf<Args> { error("no args found!") }
 
@@ -64,25 +64,22 @@ fun SummaryScreenSetup(
     period0: Int = Period.DAY,
     contentType0: Int = ContentType.LOCATION
 ) {
-    val findTimeLogs: (Int, Long, Long) -> List<TimeLog> = { contentType, fromDateTime, untilDateTime ->
-        viewModel.findTimeLog(contentType, fromDateTime, untilDateTime)
-    }
     var period by remember{ mutableStateOf(period0) }
     var contentType by remember{ mutableStateOf(contentType0) }
 
-    val getLocationById: (Int) -> Location? = { id -> viewModel.getLocationById(id)}
-    val updateLocation: (Location) -> Unit = { location -> viewModel.updateLocation(location) }
-    val navToName: (Int, Double, Double) -> Unit = { locId, lat, lon ->
+    val getLocationById = { id: Int -> viewModel.getLocationById(id)}
+    val navToName = { locId: Int, lat: Double, lon: Double ->
         navController.navigate("${DESTINATIONS.NAME}/$locId,$lat,$lon,$period,$contentType")
     }
-    val args = Args(
-        getLocationById, updateLocation, navToName
-    )
+    val subscribeActivity = { viewModel.subscribeActivity() }
+    val subscribeSleep = { viewModel.subscribeSleep() }
+    val args = Args(getLocationById, navToName, subscribeActivity, subscribeSleep)
 
     CompositionLocalProvider(LocalArgs provides args) {
         SummaryScreen(
-            findTimeLogs = findTimeLogs,
-            updateAll = { viewModel.updateAll() },
+            getLogs = { contentType, from, until ->
+                viewModel.getLogs(contentType, from, until)
+            },
             navToInput = { navController.navigate("${DESTINATIONS.INPUT}/$period,$contentType") },
             navToSetting = { navController.navigate("${DESTINATIONS.SETTING}") },
             period = period,
@@ -95,8 +92,7 @@ fun SummaryScreenSetup(
 
 @Composable
 fun SummaryScreen(
-    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
-    updateAll: () -> Unit,
+    getLogs: (Int, Long, Long) -> List<TimeLog>,
     navToInput: () -> Unit,
     navToSetting: () -> Unit,
     period: Int,
@@ -106,10 +102,11 @@ fun SummaryScreen(
 ) {
     // ドロップダウンの最初の日付。最初のAppLogの日付を使う。AppLogがまだ保存されていないとき(0の場合)、
     // ドロップダウンの日付の量が多くなってしまうので、現在の日付にする。
-    val firstDate = loadSharedPrefLong(LocalContext.current, "firstAppLogTime").let {
-        if (it == 0L) LocalDate.now() else it.toLocalDateTime().toLocalDate()
+    val firstDateTime = loadSharedPrefLong(LocalContext.current, "firstLogDateTime")
+    if (firstDateTime == 0L) {
+        saveSharedPref(LocalContext.current, "firstLogDateTime", LocalDateTime.now().toMilliSec())
     }
-    Log.d("summary", "$firstDate")
+    val firstDate = firstDateTime.toLocalDateTime().toLocalDate()
     val lastDate = LocalDate.now(ZoneId.systemDefault()) //現在の日付
     var cnt by remember { mutableStateOf(0) }
 
@@ -124,7 +121,6 @@ fun SummaryScreen(
             Button(
                 modifier = Modifier.padding(10.dp),
                 onClick = {
-                    updateAll()
                     recomposeVal++
                           },
                 content = {
@@ -158,28 +154,25 @@ fun SummaryScreen(
                 modifier = Modifier.weight(2f),
                 lastDate = lastDate,
                 firstDate = firstDate,
-                findTimeLogs = findTimeLogs,
                 contentType = contentType,
                 recomposeVal = recomposeVal,
-                updateAll = updateAll
+                getLogs = getLogs
             )
             Period.WEEK -> WeekPage(
                 modifier = Modifier.weight(2f),
                 lastDate = lastDate,
                 firstDate = firstDate,
-                findTimeLogs = findTimeLogs,
                 contentType = contentType,
                 recomposeVal = recomposeVal,
-                updateAll = updateAll
+                getLogs = getLogs
             )
             Period.DAY -> DayPage(
                 modifier = Modifier.weight(2f),
                 lastDate = lastDate,
                 firstDate = firstDate,
-                findTimeLogs = findTimeLogs,
                 contentType = contentType,
                 recomposeVal = recomposeVal,
-                updateAll = updateAll
+                getLogs = getLogs
             )
         }
 
@@ -203,13 +196,12 @@ fun SummaryScreen(
 
 @Composable
 fun DayPage(
+    getLogs: (Int, Long, Long) -> List<TimeLog>,
     modifier: Modifier,
     lastDate: LocalDate,
     firstDate: LocalDate,
-    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
     recomposeVal: Int,
-    updateAll: () -> Unit
 ) {
     val heightAlpha = 2f
 
@@ -234,22 +226,20 @@ fun DayPage(
         datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
-        findTimeLogs = findTimeLogs,
         contentType = contentType,
         recomposeVal = recomposeVal,
-        updateAll = updateAll
+        getLogs = getLogs
     )
 }
 
 @Composable
 fun WeekPage(
+    getLogs: (Int, Long, Long) -> List<TimeLog>,
     modifier: Modifier,
     lastDate: LocalDate,
     firstDate: LocalDate,
-    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
     recomposeVal: Int,
-    updateAll: () -> Unit
 ) {
     val heightAlpha = 2f/6f
 
@@ -286,22 +276,20 @@ fun WeekPage(
         datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
-        findTimeLogs = findTimeLogs,
         contentType = contentType,
         recomposeVal = recomposeVal,
-        updateAll = updateAll
+        getLogs = getLogs
     )
 }
 
 @Composable
 fun MonthPage(
+    getLogs: (Int, Long, Long) -> List<TimeLog>,
     modifier: Modifier,
     lastDate: LocalDate,
     firstDate: LocalDate,
-    findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
     contentType: Int,
-    recomposeVal: Int,
-    updateAll: () -> Unit
+    recomposeVal: Int
 ) {
     val heightAlpha = 2f/24f
 
@@ -335,10 +323,9 @@ fun MonthPage(
         datesDisplayed = datesDisplayed,
         heightAlpha = heightAlpha,
         calcTimeIndices = calcTimeIndices,
-        findTimeLogs = findTimeLogs,
         contentType = contentType,
         recomposeVal = recomposeVal,
-        updateAll = updateAll
+        getLogs = getLogs
     )
 }
 
@@ -351,13 +338,13 @@ fun SummaryContent(modifier: Modifier,
                    datesDisplayed: List<String>,
                    heightAlpha: Float,
                    calcTimeIndices: (LocalDate, LocalDate) -> List<LocalDateTime>,
-                   findTimeLogs: (Int, Long, Long) -> List<TimeLog>,
                    contentType: Int,
                    recomposeVal: Int,
-                   updateAll: () -> Unit
+                   getLogs: (Int, Long, Long) -> List<TimeLog>
 ) {
     val context = LocalContext.current
-    var recomposeVal2 by remember{ mutableStateOf(0) }
+    val recomposeTrigger = remember{ mutableStateOf(false) }
+    Log.d("SummaryContent","recomposed! ${recomposeTrigger.value}")
     val pagerState = rememberPagerState(initialPage = 0)
     val coroutineScope = rememberCoroutineScope()
 
@@ -375,7 +362,7 @@ fun SummaryContent(modifier: Modifier,
         val endDateTime = LocalDateTime.of(endDate, LocalTime.MAX).toMilliSec()
 
         // 表示するリストの作成
-        val timeLogs = findTimeLogs(contentType, startDateTime, endDateTime).cropped(startDate, endDate)
+        val timeLogs = getLogs(contentType, startDateTime, min(endDateTime, LocalDateTime.now().toMilliSec()))
         val timeIndices = calcTimeIndices(startDate, endDate)
         val timeLine: List<TimeLog>
                 = timeLogs
@@ -389,6 +376,9 @@ fun SummaryContent(modifier: Modifier,
         // Listのスクロール位置を管理する各種状態
         val timeLogSummaryState = rememberLazyListState()
         var appNameSelected: String by remember{ mutableStateOf("") }
+
+        val subscribeActivity = LocalArgs.current.subscribeActivity
+        val subscribeSleep = LocalArgs.current.subscribeSleep
 
         // コンポーザブル
         Column() {
@@ -437,13 +427,11 @@ fun SummaryContent(modifier: Modifier,
                 )
 
                 // Permissionが取れてない時に、警告するポップアップ
-                myLog("permission", "recomposed! $recomposeVal2")
                 when (contentType) {
                     ContentType.APP ->
                         if (!checkUsageStatsPermission(context)) {
                             RequirePermissionComposable(
-                                text = "「アプリ」ログを取得するには端末の「使用状況へのアクセス」を許可する必要があります。\n" +
-                                        "個人情報が外部に発信されることはありません。",
+                                text = stringResource(id = R.string.request_permission_about_app),
                                 onClick = {
                                     ContextCompat.startActivity(
                                         context,
@@ -453,40 +441,36 @@ fun SummaryContent(modifier: Modifier,
                                 },
                                 onClick2 = {
                                     if (checkUsageStatsPermission(context)) {
-                                        updateAll()
-                                        recomposeVal2++
+                                        recomposeTrigger.value = !recomposeTrigger.value
                                     }
                                 }
                             )
                         }
+
                     ContentType.LOCATION ->
                         if (!(checkLocationPermission(context) && checkActivityPermission(context))) {
                             RequirePermissionComposable(
-                                text = "「場所」ログを取得するには端末の「身体データへのアクセス」,「位置情報へのアクセス」を許可する必要があります。\n" +
-                                        "各設定のそれぞれ一番上の権限を許可してください。\n" +
-                                        "個人情報が外部に発信されることはありません。" ,
+                                text = stringResource(id = R.string.request_permission_about_location),
                                 onClick = { requestActivityAndLocationPermission(context) },
                                 onClick2 = {
                                     if (checkLocationPermission(context) && checkActivityPermission(context)) {
-                                        subscribeAT(context)
-                                        subscribeSleep(context)
-                                        updateAll()
-                                        recomposeVal2++
+                                        subscribeActivity()
+                                        subscribeSleep()
+                                        recomposeTrigger.value = !recomposeTrigger.value
                                     }
                                 }
                             )
                         }
+
                     ContentType.SLEEP ->
                         if (!checkActivityPermission(context)) {
                             RequirePermissionComposable(
-                                text = "「睡眠」ログを取得するには端末の「身体データへのアクセス」を許可する必要があります。\n" +
-                                        "個人情報が外部に発信されることはありません。",
+                                text = stringResource(id = R.string.request_permission_about_sleep),
                                 onClick = { requestActivityPermission(context) },
                                 onClick2 = {
                                     if (checkActivityPermission(context)) {
-                                        subscribeSleep(context)
-                                        updateAll()
-                                        recomposeVal2++
+                                        subscribeSleep()
+                                        recomposeTrigger.value = !recomposeTrigger.value
                                     }
                                 }
                             )
@@ -601,26 +585,19 @@ fun RequirePermissionComposable(
             .fillMaxWidth()
             .fillMaxHeight()
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.warning),
-            contentDescription = "",
-            modifier = Modifier.size(50.dp, 50.dp)
-        )
         Text(text = text)
-        Row() {
+        Column() {
             TextButton(
-                modifier = Modifier
-                    .padding(20.dp),
+                modifier = Modifier,
                 onClick = onClick
             ) {
-                Text(text = stringResource(id = R.string.set_permission), color = Color.White, fontSize = 25.sp, maxLines = 1)
+                Text(text = stringResource(id = R.string.request_setting_button), color = Color.White, maxLines = 1)
             }
             TextButton(
-                modifier = Modifier
-                    .padding(20.dp),
+                modifier = Modifier,
                 onClick = onClick2
             ) {
-                Text(text = stringResource(id = R.string.reload_permission), color = Color.White, fontSize = 25.sp, maxLines = 1)
+                Text(text = stringResource(id = R.string.confirm_request), color = Color.White, maxLines = 1)
             }
         }
     }
@@ -679,7 +656,6 @@ fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<Long>): List<TimeLo
             if (tmpTimeLog.fromDateTime <= indexedDateTime && indexedDateTime < tmpTimeLog.untilDateTime) {
                 newTimeLogList.add(
                     TimeLog(
-                    contentType = tmpTimeLog.contentType,
                     fromDateTime = tmpTimeLog.fromDateTime,
                     untilDateTime = indexedDateTime,
                     timeContent = tmpTimeLog.timeContent
@@ -687,14 +663,12 @@ fun List<TimeLog>.toTimeIndexInserted(indexedDateTimes: List<Long>): List<TimeLo
                 )
                 newTimeLogList.add(
                     TimeLog(
-                    contentType = timeLog.contentType,
                     fromDateTime = indexedDateTime,
                     untilDateTime = indexedDateTime,
                     timeContent = "__IndexedDateTime__"
                     )
                 )
                 tmpTimeLog = TimeLog(
-                    contentType = tmpTimeLog.contentType,
                     fromDateTime = indexedDateTime,
                     untilDateTime = tmpTimeLog.untilDateTime,
                     timeContent = tmpTimeLog.timeContent
@@ -730,16 +704,6 @@ fun List<TimeLog>.getTimeIndexNow(): Int {
 
 fun max(a: LocalDate, b: LocalDate): LocalDate = if (a > b) a else b
 
-fun List<TimeLog>.cropped(fromDate: LocalDate, untilDate: LocalDate)
-    = this.map{
-        TimeLog(
-            it.contentType,
-            it.timeContent,
-            max(it.fromDateTime, LocalDateTime.of(fromDate, LocalTime.MIN).toMilliSec()),
-            min(it.untilDateTime, LocalDateTime.of(untilDate, LocalTime.MAX).toMilliSec())
-        )
-    }
-
 //TimeLogList内のTimeLog間の時間をダミーLogで埋める（表示のため）
 fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): List<TimeLog> {
     val newTimeLogList = mutableListOf<TimeLog>()
@@ -749,7 +713,6 @@ fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): Li
     if(this.isEmpty()) {
         newTimeLogList.add(
             TimeLog(
-                contentType = -1,
                 fromDateTime = fromDateTime,
                 untilDateTime = untilDateTime,
                 timeContent = "__Dummy__")
@@ -764,7 +727,6 @@ fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): Li
             // ダミーTimeLogを追加する
             newTimeLogList.add(
                 TimeLog(
-                contentType = -1 ,
                 fromDateTime = tmpDateTime,
                 untilDateTime = it.fromDateTime,
                 timeContent = "__Dummy__")
@@ -779,7 +741,6 @@ fun List<TimeLog>.toTimeGapFilled(fromDate: LocalDate, untilDate: LocalDate): Li
     if(tmpDateTime < untilDateTime) {
         newTimeLogList.add(
             TimeLog(
-                contentType = -1,
                 fromDateTime = tmpDateTime,
                 untilDateTime = untilDateTime,
                 timeContent = "__Dummy__")
@@ -802,7 +763,6 @@ fun List<TimeLog>.toCloseConcatenated(): List<TimeLog> {
                 && it.fromDateTime - tmpTimeLog.untilDateTime < thrTimeSpan
             ){
                 TimeLog(
-                    contentType = tmpTimeLog.contentType,
                     fromDateTime = tmpTimeLog.fromDateTime,
                     untilDateTime = it.untilDateTime,
                     timeContent = tmpTimeLog.timeContent
@@ -816,8 +776,7 @@ fun List<TimeLog>.toCloseConcatenated(): List<TimeLog> {
     return newTimeLogList
 }
 
-data class TimeLogSummary(
-    val contentType: Int,
+class TimeLogSummary(
     val timeContent: String,
     val duration: Long //millisecond
 )
@@ -894,11 +853,11 @@ fun SleepLogSummaryRow(timeLogSummary: TimeLogSummary,
             .selectable(false, onClick = onClick)
     ) {
         SleepIcon(sleepState = timeLogSummary.timeContent, modifier = Modifier.size(40.dp, 40.dp))
-        Text(when(timeLogSummary.timeContent)
-            {"sleep" -> stringResource(id = R.string.sleep_state)
-                "awake" -> stringResource(id = R.string.awake_state)
-                "unsure" -> stringResource(id = R.string.unsure_state)
-                else -> ""
+        Text(when(timeLogSummary.timeContent.toInt()) {
+            SleepState.SLEEP -> stringResource(id = R.string.sleep_state)
+            SleepState.AWAKE -> stringResource(id = R.string.awake_state)
+            SleepState.UNKNOWN -> stringResource(id = R.string.unsure_state)
+            else -> ""
             },
             modifier = Modifier.weight(0.2f)
         )
@@ -906,14 +865,16 @@ fun SleepLogSummaryRow(timeLogSummary: TimeLogSummary,
     }
 }
 
-//　TimeLogSummaryの情報を表示（Location用）
 @Composable
+// 位置情報のログサマリーを表示する行コンポーネント
+// 各位置情報のログに基づいて、アクティビティアイコン、場所名（または地図表示ボタン）、ログの期間と割合を表示します。
 fun LocationLogSummaryRow(
-    timeLogSummary: TimeLogSummary,
-    onClick: () -> Unit,
-    non_transparency: Int,
-    allTime: Long,
+    timeLogSummary: TimeLogSummary, // 位置情報のログサマリー
+    onClick: () -> Unit, // 行がクリックされたときのコールバック
+    non_transparency: Int, // 背景色の透明度
+    allTime: Long, // 全体のログ時間
 ) {
+    // ロケーションログの概要を表示するための行
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -921,85 +882,131 @@ fun LocationLogSummaryRow(
             .background(color = timeLogSummary.timeContent.toColor(non_transparency))
             .selectable(false, onClick = onClick)
     ) {
-        val locContent = timeLogSummary.timeContent.toLocContent()
-        ActivityIcon(activityType = locContent.activityType, modifier = Modifier.size(40.dp, 40.dp))
-        if (locContent.activityType == DetectedActivity.STILL) {
-            if (locContent.lat != null && locContent.lon != null) {
-                val locName: String? = LocalArgs.current.getLocationById(locContent.locId!!)?.name
-                var popupState by remember { mutableStateOf(false) }
-                if (locName == null || locName == "") {
-                    Button(
-                        onClick = { popupState = true },
-                        modifier = Modifier
-                            .weight(0.2f)
-                            .height(40.dp)
-                    ) {
-                        Text(text = stringResource(id = R.string.show_map))
-                    }
-                } else {
-                    Text(modifier = Modifier
-                        .weight(0.2f)
-                        .clickable { popupState = true }, text = locName)
-                }
-                if (popupState){
-                    GoogleMapPopup(
-                        modifier = Modifier.size(300.dp, 300.dp),
-                        locContent = locContent,
-                        closeThis = { popupState = false },
-                    )
-                }
-            } else {
-                Text(modifier = Modifier.weight(0.2f), text = stringResource(id = R.string.null_location))
-            }
-        } else { Text(modifier = Modifier
-            .weight(0.2f)
-            .fillMaxWidth(), text = "")
-        }
-        Text(text = "${timeLogSummary.duration.toHMS()} ${round(timeLogSummary.duration.toDouble()/allTime.toDouble()*1000.0)/10.0}%", modifier = Modifier.weight(0.3f))
+        val (activityType, locationId) = parseTimeContent(timeLogSummary.timeContent)
+
+        // アクティビティアイコンを表示
+        ActivityIcon(activityType = activityType, modifier = Modifier.size(40.dp, 40.dp))
+
+        // ロケーション情報を取得
+        val location = getLocation(locationId)
+        // ポップアップの状態を管理するための状態変数
+        var popupState by remember { mutableStateOf(false) }
+        // ロケーション名を表示
+        DisplayLocationName(Modifier.weight(2f), location, activityType) { popupState = true }
+
+        // Googleマップのポップアップを表示
+        GoogleMapPopup(
+            Modifier.size(300.dp, 300.dp), location, popupState) { popupState = false }
+
+        // ロケーションログの期間と割合を表示
+        Text(
+            text = "${timeLogSummary.duration.toHMS()} ${round(timeLogSummary.duration.toDouble() / allTime.toDouble() * 1000.0) / 10.0}%",
+            modifier = Modifier.weight(3f)
+        )
     }
 }
 
 @Composable
-fun GoogleMapPopup(modifier: Modifier, locContent: LocContent, closeThis: () -> Unit) {
-    val loc = LatLng(locContent.lat!!, locContent.lon!!)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(loc, 15f)
-    }
-    val navToName = LocalArgs.current.navToName
-    Popup(
-        alignment = Alignment.Center,
-        onDismissRequest = closeThis
-    ) {
-        Column {
-            Button(onClick={ navToName(
-                locContent.locId!!,
-                locContent.lat,
-                locContent.lon
-            ) }, content = { Text(text = stringResource(id = R.string.name_location))} )
-            GoogleMap(
-                modifier = modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState
+private fun DisplayLocationName(
+    modifier: Modifier = Modifier,
+    location: Location?,
+    activityType: Int,
+    onClick: () -> Unit
+) {
+    // ロケーション名を表示するための関数
+    when {
+        location == null -> {
+            if (activityType == DetectedActivity.STILL) {
+                // ロケーション情報がnullの場合、「null_location」と表示
+                Text(
+                    modifier = modifier,
+                    text = stringResource(id = R.string.null_location)
+                )
+            } else {
+                Text(
+                    modifier = modifier,
+                    text = ""
+                )
+            }
+        }
+        location.name != "" -> {
+            // ロケーション名が存在する場合、ロケーション名を表示
+            Text(
+                modifier = modifier
+                    .clickable { onClick() },
+                text = location.name
+            )
+        }
+        else -> {
+            // ロケーション名が存在しない場合、「show_map」と表示
+            Button(
+                onClick = onClick,
+                modifier = modifier
+                    .height(40.dp)
             ) {
-                Marker(state = MarkerState(position = loc))
+                Text(text = stringResource(id = R.string.show_map))
+            }
+        }
+    }
+}
+
+// 位置情報を取得する関数
+@Composable
+private fun getLocation(locationId: Int?): Location? {
+    return if (locationId != null) {
+        // locationIdがnullでない場合、位置情報を取得
+        LocalArgs.current.getLocationById(locationId)
+    } else {
+        // locationIdがnullの場合、nullを返す
+        null
+    }
+}
+
+@Composable
+// 地図ポップアップを表示するコンポーネント
+fun GoogleMapPopup(
+    modifier: Modifier = Modifier,
+    location: Location?,
+    popupState: Boolean,
+    closeThis: () -> Unit
+) {
+    if (popupState && location != null) {
+        val loc = LatLng(location.latitude, location.longitude)
+        val cameraPositionState = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(loc, 15f)
+        }
+        val navToName = LocalArgs.current.navToName
+        Popup(
+            alignment = Alignment.Center,
+            onDismissRequest = closeThis
+        ) {
+            Column {
+                Button(
+                    onClick = { navToName(location.id, location.latitude, location.longitude) },
+                    content = { Text(text = stringResource(id = R.string.name_location))} )
+                GoogleMap(
+                    modifier = modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState
+                ) {
+                    Marker(state = MarkerState(position = loc))
+                }
             }
         }
     }
 }
 
 fun List<TimeLog>.toTimeLogSummaryList(): List<TimeLogSummary> {
-    val contentsSet: Set<Pair<String, Int>> = this.map { Pair(it.timeContent, it.contentType) }.toSet()
+    val contentsSet: Set<String> = this.map { it.timeContent }.toSet()
     val retList = mutableListOf<TimeLogSummary>()
-    contentsSet.forEach { pair ->
+    contentsSet.forEach { content ->
         val sameTimeLogList = mutableListOf<TimeLog>()
         this.forEach { timeLog ->
-            if(timeLog.timeContent == pair.first && timeLog.contentType == pair.second) {
+            if(timeLog.timeContent == content) {
                 sameTimeLogList.add(timeLog)
             }
         }
         val duration = sameTimeLogList.sumOf { it.untilDateTime - it.fromDateTime }
-        retList.add(TimeLogSummary(
-            timeContent = pair.first, contentType = pair.second, duration = duration
-        ))
+        retList.add(TimeLogSummary(timeContent = content, duration = duration))
     }
     return retList
 }

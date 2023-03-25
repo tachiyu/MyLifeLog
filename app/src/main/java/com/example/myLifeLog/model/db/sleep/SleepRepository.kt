@@ -1,5 +1,6 @@
 package com.example.myLifeLog.model.db.sleep
 
+import com.example.myLifeLog.Sleep
 import kotlinx.coroutines.*
 
 class SleepRepository(private val sleepDao: SleepDao) {
@@ -20,10 +21,10 @@ class SleepRepository(private val sleepDao: SleepDao) {
         }
     }
 
-    fun getSleepBetween(fromDateTime: Long, untilDateTime: Long): List<Sleep> {
+    fun getSleepLogsInRangeWithNearestPrevious(fromDateTime: Long, untilDateTime: Long): List<Sleep> {
         return runBlocking {
             coroutineScope.async(Dispatchers.IO) {
-                return@async sleepDao.getSleepBetween(fromDateTime, untilDateTime)
+                return@async sleepDao.getSleepLogsInRangeWithNearestPrevious(fromDateTime, untilDateTime)
             }.await()
         }
     }

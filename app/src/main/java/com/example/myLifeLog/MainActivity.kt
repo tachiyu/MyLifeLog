@@ -14,17 +14,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.myLifeLog.model.apimanager.ActivityTransitionManager
-import com.example.myLifeLog.model.apimanager.SleepManager
-import com.example.myLifeLog.model.checkActivityPermission
-import com.example.myLifeLog.model.checkLocationPermission
 import com.example.myLifeLog.ui.theme.MylifelogTheme
 
 class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // パーミッションの確認・パーミッションが無ければユーザーに許可を求める
 
         setContent {
             MylifelogTheme {
@@ -47,29 +42,13 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
                             )
                         )
                         // 起動時の処理
-                        if (loadSharedPrefBool(this, "IsActivityRecognitionSubscribed")) {
-                            ActivityTransitionManager.getInstance(this).startActivityUpdate()
-                        }
-                        if (loadSharedPrefBool(this, "IsSleepDetectionSubscribed")) {
-                            SleepManager.getInstance(this).startSleepUpdate()
-                        }
+                        viewModel.subscribeActivity()
+                        viewModel.subscribeSleep()
                         App(viewModel = viewModel)
                     }
                 }
             }
         }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        val aPerm = checkActivityPermission(this)
-        val lPerm = checkLocationPermission(this)
-        if (aPerm && lPerm) { subscribeAT(this) }
-        if (aPerm) { subscribeSleep(this) }
     }
 }
 

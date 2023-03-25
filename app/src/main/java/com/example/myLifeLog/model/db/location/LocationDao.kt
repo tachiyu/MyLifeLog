@@ -4,11 +4,12 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import com.example.myLifeLog.Location
 
 @Dao
 interface LocationDao {
     @Insert
-    fun insertLocation(location: Location)
+    suspend fun insertLocationAndGetId(location: Location): Long
 
     @Query("SELECT * FROM location")
     fun getAllLocations(): List<Location>

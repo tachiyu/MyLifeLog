@@ -1,12 +1,9 @@
 package com.example.myLifeLog.model.apimanager
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
 import com.example.myLifeLog.model.checkActivityPermission
 import com.example.myLifeLog.model.receiver.ActivityUpdatesBroadcastReceiver
 import com.example.myLifeLog.myLog
@@ -17,7 +14,7 @@ class ActivityTransitionManager  private constructor(private val context: Contex
     private val activityRecognitionClient: ActivityRecognitionClient =
         ActivityRecognition.getClient(context)
 
-    val transitions = mutableListOf<ActivityTransition>().apply {
+    private val transitions = mutableListOf<ActivityTransition>().apply {
         activities.forEach { a ->
             listOf(
                 ActivityTransition.ACTIVITY_TRANSITION_ENTER,
@@ -39,36 +36,18 @@ class ActivityTransitionManager  private constructor(private val context: Contex
     }
 
     @SuppressLint("MissingPermission")
-    fun startActivityUpdate(){
-        myLog(TAG, "startActivityUpdate called")
+    fun subscribeActivity(){
         if (!checkActivityPermission(context)) {
-            myLog(TAG, "permission denied: ACTIVITY_RECOGNITION")
+            myLog(TAG, "permission denied: ACTIVITY_RECOGNITION", context)
             return
-        } else{
+        } else {
             activityRecognitionClient.requestActivityTransitionUpdates(
                 ActivityTransitionRequest(transitions),
                 activityUpdatePendingIntent
             ).also {
-                it.addOnSuccessListener { myLog(TAG, "subscribe to activity detection") }
-                it.addOnFailureListener { myLog(TAG, "can not subscribe to activity detection") }
+                it.addOnSuccessListener { myLog(TAG, "subscribe to activity detection", context) }
+                it.addOnFailureListener { myLog(TAG, "can not subscribe to activity detection", context) }
             }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun stopActivityUpdate() {
-        myLog(TAG, "stopActivityUpdate called")
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACTIVITY_RECOGNITION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            myLog(TAG, "permission denied: ACTIVITY_RECOGNITION")
-            return
-        }
-        activityRecognitionClient.removeActivityTransitionUpdates(activityUpdatePendingIntent).also{
-            it.addOnSuccessListener { myLog(TAG, "stop subscribe to activity detection") }
-            it.addOnFailureListener { myLog(TAG, "can not stop subscribe to activity detection") }
         }
     }
 

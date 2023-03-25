@@ -68,37 +68,33 @@ fun requestActivityPermission(context: Context) {
         )
     }
 }
+
 fun requestActivityAndLocationPermission(context: Context) {
     if (checkActivityPermission(context) && checkLocationPermission(context)) {
         return
-    } else {
-        val permissions
-             = if (!checkActivityPermission(context) && !checkLocationPermission(context)){
-                    if (Build.VERSION.SDK_INT >= 29) {
-                        arrayOf(
-                            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACTIVITY_RECOGNITION
-                        )
-                    } else {
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            "com.google.android.gms.permission.ACTIVITY_RECOGNITION"
-                        )
-                    }
-                } else if (!checkLocationPermission(context)) {
-                    if (Build.VERSION.SDK_INT >= 29) {
-                        arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                    } else {
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-                    }
-                } else {
-                    arrayOf("com.google.android.gms.permission.ACTIVITY_RECOGNITION")
-                }
-        ActivityCompat.requestPermissions(
-            context as Activity,
-            permissions,
-            0
-        )
     }
+
+    val permissions = mutableListOf<String>()
+
+    if (!checkLocationPermission(context)) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        }
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    if (!checkActivityPermission(context)) {
+        val activityRecognitionPermission = if (Build.VERSION.SDK_INT >= 29) {
+            Manifest.permission.ACTIVITY_RECOGNITION
+        } else {
+            "com.google.android.gms.permission.ACTIVITY_RECOGNITION"
+        }
+        permissions.add(activityRecognitionPermission)
+    }
+
+    ActivityCompat.requestPermissions(
+        context as Activity,
+        permissions.toTypedArray(),
+        0
+    )
 }

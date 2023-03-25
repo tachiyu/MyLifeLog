@@ -15,6 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.example.myLifeLog.*
 import com.example.myLifeLog.R
 import com.google.android.gms.location.DetectedActivity
 
@@ -48,10 +49,10 @@ fun ActivityIcon(activityType: Int, modifier: Modifier = Modifier) {
 
 @Composable
 fun SleepIcon(sleepState: String, modifier: Modifier = Modifier) {
-    val resourceId = when(sleepState){
-        "sleep" -> R.drawable.sleep
-        "awake" -> R.drawable.awake
-        "unsure" -> R.drawable.unsure
+    val resourceId = when(sleepState.toInt()){
+        SleepState.SLEEP -> R.drawable.sleep
+        SleepState.AWAKE -> R.drawable.awake
+        SleepState.UNKNOWN -> R.drawable.unsure
         else -> R.drawable.null_app_icon
     }
     Image(modifier = modifier, painter = painterResource(id = resourceId), contentDescription = sleepState)
@@ -93,53 +94,6 @@ fun PeriodTabBar(modifier: Modifier = Modifier, period: Int, onTabSwitch: (Int) 
     }
 }
 
-object Period {
-    const val DAY = 0
-    const val WEEK = 1
-    const val MONTH = 2
-    val All = listOf<Int>(DAY, WEEK, MONTH)
-    fun getStringId(index: Int): Int {
-        return when(index) {
-            DAY -> R.string.day
-            WEEK -> R.string.week
-            MONTH -> R.string.month
-            else -> {
-                throw IllegalArgumentException("unknown period")
-            }
-        }
-    }
-}
-
-object ContentType {
-    const val APP = 0
-    const val LOCATION = 1
-    const val SLEEP = 2
-    const val OTHERS = 3
-    val All = listOf<Int>(LOCATION, APP, SLEEP, OTHERS)
-    fun getStringId(index: Int): Int {
-        return when(index) {
-            APP -> R.string.app
-            LOCATION -> R.string.location
-            SLEEP -> R.string.sleep
-            OTHERS -> R.string.others
-            else -> {
-                throw IllegalArgumentException("unknown content type")
-            }
-        }
-    }
-    fun getIconId(index: Int): Int {
-        return when(index) {
-            APP -> R.drawable.app
-            LOCATION -> R.drawable.walking
-            SLEEP -> R.drawable.sleep
-            OTHERS -> R.drawable.others
-            else -> {
-                throw IllegalArgumentException("unknown content type")
-            }
-        }
-    }
-}
-
 @Composable
 fun ContentTypeTabBar(modifier: Modifier = Modifier,
                       contentType: Int,
@@ -171,24 +125,6 @@ fun ContentTypeTabBar(modifier: Modifier = Modifier,
             )
         }
     }
-}
-
-object DataType {
-    const val LOCATION = 0
-    const val TRANSITION = 1
-    const val SLEEP = 2
-    val All = listOf<Int>(LOCATION, TRANSITION, SLEEP)
-    fun getString(index: Int): String {
-        return when(index) {
-            LOCATION -> "location"
-            TRANSITION -> "transition"
-            SLEEP -> "sleep"
-            else -> {
-                throw IllegalArgumentException("unknown data type")
-            }
-        }
-    }
-
 }
 
 @Composable
