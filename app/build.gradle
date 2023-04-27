@@ -9,7 +9,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.myLifeLog"
+        applicationId "com.tachiyu.lifelog"
         minSdk 28
         targetSdk 33
         versionCode 1
@@ -48,7 +48,7 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
-    namespace 'com.example.myLifeLog'
+    namespace 'com.tachiyu.lifelog'
 }
 
 dependencies {
